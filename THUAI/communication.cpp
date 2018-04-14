@@ -40,7 +40,7 @@ void MyClient::start_connection()
     string sflag(cflag);
     istringstream os(sflag);
     os >> flag;
-    cout << "my flag is" << flag;
+    cout << "my flag is" << flag << endl;
     int size = 200 * 200;
     smap = new char[size + 1];
     int now=0;
@@ -226,6 +226,7 @@ State* MyClient::recv_state()
         }
     }
     int soldier_name;
+    int s_level;
     for (int i = 0; i < 2; i++)
     {
         istringstream soldiers(m0.str(4 + i * 3));
@@ -239,10 +240,11 @@ State* MyClient::recv_state()
             soldiers >> hp;
             soldiers >> posx;
             soldiers >> posy;
+            soldiers >> s_level;
             soldiers >> temp;
             SoldierName q;
             q = (SoldierName)soldier_name;
-            state->soldier[i].push_back(Soldier(q, hp, Position(posx, posy), i, unit_id));
+            state->soldier[i].push_back(Soldier(q, hp, Position(posx, posy), i, unit_id,s_level));
         }
     }
     use = false;

@@ -1,0 +1,13 @@
+Debug/*
+Release/*
+x64/*
+*.sln
+THUAI/Debug/*
+THUAI/Release/*
+THUAI/x64/*
+*.vcxproj
+*.filters
+*.user
+.vs/
+*.png
+*.txt

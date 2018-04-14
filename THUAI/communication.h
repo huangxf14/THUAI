@@ -4,7 +4,6 @@
 #include"api_player.h"
 #define _mapsize 200
 #include<vector>
-using namespace std;
 
 struct _resource
 {
@@ -21,8 +20,8 @@ struct State
     int winner;
     _resource resource[2];
     Age age[2];
-    vector<Building> building[2];
-    vector<Soldier> soldier[2];
+    std::vector<Building> building[2];
+    std::vector<Soldier> soldier[2];
 };
 
 struct command1
@@ -51,7 +50,7 @@ private:
     bool fflag;
     char* smap;
     void change_map(char* map0);
-    char* change_command(bool _update, vector<command1> &v1, vector<command2>&v2);
+    char* change_command(bool _update, std::vector<command1> &v1, std::vector<command2>&v2);
 
 public:
     int flag;
@@ -60,7 +59,7 @@ public:
 public:
     MyClient();
     void start_connection();
-    void send_command(bool _update, vector<command1> &v1, vector<command2>&v2);
+    void send_command(bool _update, std::vector<command1> &v1, std::vector<command2>&v2);
     State* recv_state();
 };
 enum CommandID
