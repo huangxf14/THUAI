@@ -1,4 +1,4 @@
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -22,6 +22,7 @@
 #include<opencv2/opencv.hpp>
 using std::cout;
 using std::endl;
+std::ofstream file("log.txt", 'w');
 #endif // DEBUG
 
 
@@ -30,21 +31,23 @@ extern State* state;
 extern std::vector<State* > all_state;
 extern int** ts19_map;
 extern bool ts19_flag;
-int colormap[MAP_SIZE][MAP_SIZE] = { 0 };
-int mindismap[MAP_SIZE][MAP_SIZE] = { 0 };
+int colormap[MAP_SIZE][MAP_SIZE] = { 0 };//Seg area by road
+int mindismap[MAP_SIZE][MAP_SIZE] = { 0 };//the min dis for every point to the nearest road
 int minposmap[MAP_SIZE][MAP_SIZE] = { 0 };
 int buildmap[MAP_SIZE][MAP_SIZE] = { 0 };//0 - useless;1 - road;2 - building&base;3 - useful;
 int discount[41] = { 0 };
 int ROADCNT = 0;
 int ENEMY_EDGE = MAP_SIZE - BASE_SIZE;
-int area_dis = 40;//the min distance for save area
+int area_dis = 24;// 40;//the min distance for save area
 int *minareadis;//min distance from enemybase of every area
 int *areacount;//the cnt of allowed point of every area
 int *areasortid;//sort area by the dis from enemybase(short to long)
 std::vector<Position>* saveArea;
 int game_stage = 0;//Change strategy arccording to stage
 int myresource = 0, mybdpoint = 0;
-int resource_num=MAX_BD_NUM,my_resource_num=0;//the number of resource building
+int resource_num=MAX_BD_NUM,my_resource_num=0,can_upgrade_reource_num=0;//the number of resource building
+int resource_limit[6] = { 40,30,40,60,40,10 };
+int can_upgrade_produce_num = 0;//the number of produce
 bool *resource_area;//whether this area have resource building
 float science_factor = 1;
 int *test;
@@ -67,11 +70,8 @@ int mymin(int a, int b)
 }
 
 
-int dist(Position p1, Position p2) {
-	return abs(p1.x - p2.x) + abs(p1.y - p2.y);
-}
 
-int enemy_base_dist(int x, int y)
+int enemy_base_dist(int x, int y)//use my dis
 {
 	if ((x >= ENEMY_EDGE) && (y >= ENEMY_EDGE))
 		return 0;
@@ -322,11 +322,10 @@ void init()
 	cv::imwrite("map.png", map);
 	cv::imwrite("savemap.png", savemap);
 
-	std::ofstream file("log.txt",'w');
+
 	file << "area_dis: " << area_dis << endl;
 	for (int i = 0; i < ROADCNT + 1; ++i)
 		file << "area" << i << " :(dis," << minareadis[i] << ") (cnt," << areacount[i] << ")" << endl;
-	file.close();
 	cout << "Output init" << endl;
 #endif 
 
@@ -337,10 +336,7 @@ void init()
 	return;
 }
 
-void Setup()
-{
-	return;
-}
+
 
 void drawbuildingmap(int x, int y,bool flag)
 {
@@ -376,29 +372,12 @@ void drawbuildingmap(int x, int y,bool flag)
 			}
 	}
 
-	if (x >= 1)
-	{
-		if (y >= 1)
-		{
-			buildmap[x - 1][y - 1] = 2;
-		}
-		if (y + 1 < MAP_SIZE)
-		{
-			buildmap[x - 1][y + 1] = 2;
-		}
-	}
-	if (x + 1 < MAP_SIZE)
-	{
-		if (y >= 1)
-		{
-			buildmap[x + 1][y - 1] = 2;
-		}
-		if (y + 1 < MAP_SIZE)
-		{
-			buildmap[x + 1][y + 1] = 2;
-		}
-	}
-
+	buildmap[x][y] = 2;
+	if (x >= 1) buildmap[x - 1][y] = 2;
+	if (y >= 1)  buildmap[x][y - 1] = 2;
+	if (x + 1 < MAP_SIZE) buildmap[x + 1][y] = 2;
+	if (y + 1 < MAP_SIZE) buildmap[x][y + 1] = 2;
+	
 	return;
 }
 
@@ -411,7 +390,8 @@ int initBuildmap()
 			buildmap[i][j] = ts19_map[i][j];
 	//init for resource
 	my_resource_num = 0; 
-	
+	can_upgrade_reource_num = 0;
+	can_upgrade_produce_num = 0;
 	for (int i = 0; i < ROADCNT + 1; ++i) resource_area[i] = false;
 	
 	myresource = state->resource[ts19_flag].resource;
@@ -433,7 +413,13 @@ int initBuildmap()
 		if (state->building[ts19_flag][i].building_type == Programmer)
 		{
 			++my_resource_num;
+			if (state->building[ts19_flag][i].level < state->age[ts19_flag]) ++can_upgrade_reource_num;
+			if (mindismap[trans(state->building[ts19_flag][i].pos.x)][trans(state->building[ts19_flag][i].pos.y)]>area_dis)
 			resource_area[colormap[trans(state->building[ts19_flag][i].pos.x)][trans(state->building[ts19_flag][i].pos.y)] - ROADMAX] = true;
+		}
+		if (OriginalBuildingAttribute[state->building[ts19_flag][i].building_type][BUILDING_TYPE] == PRODUCTION_BUILDING)
+		{
+			if (state->building[ts19_flag][i].level < state->age[ts19_flag]) ++can_upgrade_produce_num;
 		}
 	}
 
@@ -448,11 +434,11 @@ int initBuildmap()
 	return 0;
 }
 
-bool myConstruct(BuildingType building_type, Position pos, Position soldier_pos = Position(0, 0))
+bool myConstruct(BuildingType building_type, Position pos, Position soldier_pos = Position(0, 0))//input my pos,it will change pos into real pos
 {
-	if (myresource < OriginalBuildingAttribute[building_type][ORIGINAL_RESOURCE] * science_factor)
+	if (myresource < OriginalBuildingAttribute[building_type][ORIGINAL_RESOURCE])
 		return false;
-	if (mybdpoint < OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT] * science_factor)
+	if (mybdpoint < OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT])
 		return false;
 	construct(building_type, Position(trans(pos.x),trans(pos.y)), Position(trans(soldier_pos.x),trans(soldier_pos.y)));
 
@@ -461,12 +447,32 @@ bool myConstruct(BuildingType building_type, Position pos, Position soldier_pos 
 	mybdpoint -= OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT];// *science_factor;
 
 #ifdef DEBUG
-	std::ofstream file("log.txt", 'a');
-	file << "turn: " << state->turn << " type:" << building_type << " pos: (" << pos.x << " ," <<pos.y<<") "<< endl;
-	file.close();
+	
+	file << "turn: " << state->turn << " type:" << building_type << " pos: (" << pos.x << " ," <<pos.y<<") solider:("<< soldier_pos.x<<","<<soldier_pos.y<<")"<<endl;
+
 #endif // DEBUG
 
 
+	return true;
+}
+
+bool myupgrade(int unit_id, BuildingType building_type)
+{
+	if (myresource < OriginalBuildingAttribute[building_type][ORIGINAL_RESOURCE] * 0.5)
+		return false;
+	if (mybdpoint < OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT] * 0.5)
+		return false;
+	upgrade(unit_id);
+
+	myresource -= OriginalBuildingAttribute[building_type][ORIGINAL_RESOURCE] * 0.5;// *science_factor;
+	mybdpoint -= OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT] * 0.5;// *science_factor;
+
+#ifdef DEBUG
+
+	file << "turn: " << state->turn << " type:" << building_type << " upgrade: " << unit_id << endl;
+
+#endif // DEBUG
+	
 	return true;
 }
 
@@ -476,7 +482,6 @@ int build_programmer(int n)
 	int rest_num = n;
 	bool flag;
 	int mindis,dis;
-	LOGN(n);
 	while (rest_num > 0)
 	{
 		mindis = 10000;
@@ -495,23 +500,25 @@ int build_programmer(int n)
 				}
 			}
 			if (!flag) continue;
-			myConstruct(Programmer, buildingPos);
+			if (!myConstruct(Programmer, buildingPos)) return 0;
+			else ++my_resource_num;
 			--rest_num;
 			break;
 		}
 		if (!flag) break;
-		
 	}
-
+	
 	Position *queue = new Position[MAP_SIZE*MAP_SIZE];
 	bool *queueflag = new bool[MAP_SIZE*MAP_SIZE];
-	int head, tail, cnt = 0;
+	int head, tail, cnt = 0,real_cnt=0;
 	int tx[4] = { -1,0,1,0 }, ty[4] = { 0,-1,0,1 };
 	while (rest_num > 0)
 	{
-		memset((void*)queueflag, 0, sizeof(bool)*MAP_SIZE*MAP_SIZE);
-		if (cnt == ROADCNT + 1) break;
-		if (resource_area[areasortid[cnt]]) {++cnt; continue;}
+		for (int i = 0; i < MAP_SIZE*MAP_SIZE; ++i) queueflag[i] = false;
+		//memset((void*)queueflag, 0, sizeof(bool)*MAP_SIZE*MAP_SIZE);
+		if (real_cnt == ROADCNT + 1) break;
+		if (resource_area[areasortid[real_cnt]]) {++real_cnt; continue;}
+		cnt = real_cnt;
 		//if (areacount[areasortid[cnt]] == 0) continue;
 		//BFS
 		head = 0;
@@ -526,13 +533,14 @@ int build_programmer(int n)
 		{
 			for (int i = 0; i < 4; ++i)
 			{
-				if ((queue[head].x + tx[i] < 0) || (queue[head].x + tx[i] >= MAP_SIZE) || (queue[head].y + ty[i] < 0) || (queue[head].y + ty[i] > MAP_SIZE))
+				if ((queue[head].x + tx[i] < 0) || (queue[head].x + tx[i] >= MAP_SIZE) || (queue[head].y + ty[i] < 0) || (queue[head].y + ty[i] >= MAP_SIZE))
 					continue;
 				if (queueflag[(queue[head].x + tx[i])*MAP_SIZE + queue[head].y + ty[i]]) continue;
 				if (buildmap[queue[head].x + tx[i]][queue[head].y + ty[i]] == 3)
 				{
 					buildingPos = Position(queue[head].x + tx[i], queue[head].y + ty[i]);
-					myConstruct(Programmer, buildingPos);
+					if (!myConstruct(Programmer, buildingPos)) return 0;
+					else ++my_resource_num;
 					--rest_num;
 					delete queue;
 					return rest_num;
@@ -542,10 +550,170 @@ int build_programmer(int n)
 			}
 			++head;
 		}
-		++cnt;
+		++real_cnt;
 	}
 	delete queue;
 	delete queueflag;
+	return 0;
+}
+
+int upgrade_programmer(int n)
+{
+	int rest_num = n;
+	bool flag;
+	int maxdis, minenemydis, dis, enemydis,index;
+	bool *updateflag = new bool[state->building[ts19_flag].size()];
+	for (int i = 0; i < state->building[ts19_flag].size(); ++i) updateflag[i] = false;
+	while (rest_num > 0)
+	{
+		maxdis = 0;
+		minenemydis = 10000;
+		flag = false;
+		for (int i = 0; i < state->building[ts19_flag].size(); ++i)
+		{
+			if (state->building[ts19_flag][i].building_type != Programmer) continue;
+			if (state->building[ts19_flag][i].level >= state->age[ts19_flag]) continue;
+			if (updateflag[i]) continue;
+			flag = true;
+			dis = mindismap[trans(state->building[ts19_flag][i].pos.x)][trans(state->building[ts19_flag][i].pos.y)];
+			enemydis = enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y));
+			if (dis > maxdis)
+			{
+				maxdis = dis;
+				minenemydis = enemydis;
+				index = i;
+			}
+			else if ((dis == maxdis) && (enemydis < minenemydis))
+			{
+				maxdis = dis;
+				minenemydis = enemydis;
+				index = i;
+			}
+		}
+		if (!flag) break;
+		if (!myupgrade(state->building[ts19_flag][index].unit_id, state->building[ts19_flag][index].building_type)) break;
+		else --can_upgrade_reource_num;
+		updateflag[index] = true;
+		--rest_num;
+	}
+	return rest_num;
+}
+
+int build_produce(int n, BuildingType building_type)
+{
+	int rest_num = n;
+	int mindis, roaddis, dis;
+	Position pos,solider_pos;
+	bool flag;
+	while (rest_num > 0)
+	{
+		//LOG("turn: "); LOG(state->turn); LOG("  "); LOGN(rest_num);
+		flag = false;
+		mindis = 10000;
+		for (int x = 0; x < MAP_SIZE; ++x)
+			for (int y = 0; y < MAP_SIZE; ++y)
+			{
+				if (buildmap[x][y] != 3) continue;
+				flag = true;
+				dis = enemy_base_dist(x, y);
+				if (dis < mindis)
+				{
+					mindis = dis;
+					roaddis = mindismap[x][y];
+					pos = Position(x, y);
+					continue;
+				}
+				if (dis == mindis)
+				{
+					if (roaddis <= OriginalBuildingAttribute[building_type][ORIGINAL_RANGE]) continue;
+					if ((mindismap[x][y] <= OriginalBuildingAttribute[building_type][ORIGINAL_RANGE]) ||
+						(mindismap[x][y] > roaddis))
+					{
+						mindis = dis;
+						roaddis = mindismap[x][y];
+						pos = Position(x, y);
+					}
+				}
+			}
+		if (!flag) break;
+		if (roaddis <= OriginalBuildingAttribute[building_type][ORIGINAL_RANGE])
+		{
+			//solider_pos = Position(trans(minposmap[pos.x][pos.y] / MAP_SIZE), trans(minposmap[pos.x][pos.y] % MAP_SIZE));
+			solider_pos = Position(minposmap[pos.x][pos.y] / MAP_SIZE, minposmap[pos.x][pos.y] % MAP_SIZE);
+			if (!myConstruct(building_type, pos, solider_pos)) break;
+		}
+		else
+		{
+			if (!myConstruct(Programmer,pos)) break;
+			else ++my_resource_num;
+		}
+		--rest_num;
+	}
+	
+	return 0;
+}
+
+int upgrade_produce(int n)
+{
+	int rest_num = n;
+	int mindis;
+	BuildingType level;
+	bool flag;
+	int index;
+	bool updateflag[200] = { false };
+	while (rest_num > 0)
+	{
+		flag = false;
+		mindis = 10000;
+		level = __Base;
+		for (int i = 0; i < state->building[ts19_flag].size(); ++i)
+		{
+			if (updateflag[i]) continue;
+			if (OriginalBuildingAttribute[state->building[ts19_flag][i].building_type][BUILDING_TYPE] != PRODUCTION_BUILDING)
+			{
+				updateflag[i] = true; continue;
+			}
+			if (state->building[ts19_flag][i].level >= state->age[ts19_flag])
+			{
+				updateflag[i] = true; continue;
+			}
+			if ((myresource < OriginalBuildingAttribute[state->building[ts19_flag][i].building_type][ORIGINAL_RESOURCE] * 0.5) ||
+				(mybdpoint < OriginalBuildingAttribute[state->building[ts19_flag][i].building_type][ORIGINAL_BUILDING_POINT] * 0.5))
+			{
+				updateflag[i] = true; continue;
+			};
+			flag = true;
+			if (state->building[ts19_flag][i].building_type > level)
+			{
+				index = i;
+				level = state->building[ts19_flag][i].building_type;
+				mindis = enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y));
+				continue;
+			}
+			if ((state->building[ts19_flag][i].building_type == level)&&
+				(state->building[ts19_flag][i].heal>state->building[ts19_flag][index].heal))
+			//	(mindis > enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y))))
+			{
+				index = i;
+				level = state->building[ts19_flag][i].building_type;
+				mindis = enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y));
+				continue;
+			}
+			if ((state->building[ts19_flag][i].building_type == level) &&
+				(state->building[ts19_flag][i].heal == state->building[ts19_flag][index].heal)&&
+				(mindis > enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y))))
+			{
+				index = i;
+				level = state->building[ts19_flag][i].building_type;
+				mindis = enemy_base_dist(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y));
+				continue;
+			}
+		}
+		if (!flag) break;
+		if (!myupgrade(state->building[ts19_flag][index].unit_id, state->building[ts19_flag][index].building_type)) break;
+		updateflag[index] = true;
+		--rest_num;
+	}
 	return 0;
 }
 
@@ -553,11 +721,56 @@ int resource_strategy()
 {
 	int bd_num = mymin(floor(myresource / OriginalBuildingAttribute[Programmer][ORIGINAL_RESOURCE]),
 		floor(mybdpoint / OriginalBuildingAttribute[Programmer][ORIGINAL_BUILDING_POINT]));
-	LOGN(bd_num);
 	bd_num = mymin(bd_num, resource_num - my_resource_num);
+	LOGN(bd_num);
 	while (bd_num>0)
 		bd_num = build_programmer(bd_num);
+	bd_num = mymin(floor(2 * myresource / OriginalBuildingAttribute[Programmer][ORIGINAL_RESOURCE]),
+		floor(2 * mybdpoint / OriginalBuildingAttribute[Programmer][ORIGINAL_BUILDING_POINT]));
+	bd_num = mymin(bd_num, can_upgrade_reource_num);
+	upgrade_programmer(bd_num);
 	return 0;
+}
+
+int produce_strategy()
+{
+	if (my_resource_num < resource_num) return 0;
+	if (can_upgrade_reource_num > 0) return 0;
+
+	//Construct produce building
+	int bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] + 1 - state->building[ts19_flag].size();
+	BuildingType building_type;
+	if (ts19_flag == 0)
+	{
+		building_type = Norton;
+		if (state->age[ts19_flag] >= NETWORK)
+			building_type = Berners_Lee;
+	}
+	else
+	{
+		building_type = Thevenin;
+		if (state->age[ts19_flag] == NETWORK)
+			building_type = Berners_Lee;
+		if (state->age[ts19_flag] == AI)
+			building_type = Tony_Stark;
+	}
+	while (bd_num > 0)
+		bd_num = build_produce(bd_num, building_type);
+
+	//Upgrade produce building
+	bd_num = can_upgrade_produce_num;
+	while (bd_num > 0)
+		bd_num = upgrade_produce(bd_num);
+
+}
+
+void Setup()
+{
+	initBuildmap();
+	int bd_num = 6;
+	while (bd_num>0)
+		bd_num = build_programmer(bd_num);
+	return;
 }
 
 void excute()
@@ -567,14 +780,28 @@ void excute()
 	initBuildmap();
 	
 	// Stage 0 - Build to defense
-	
+
+	//resource_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag];
 	// Stage 1 - Get resource
+	resource_num = resource_limit[state->age[ts19_flag]];
 	resource_strategy();
 
 	// Stage 2 - Create soldier to destroy building for producing
 	// Stage 3 - Create soldier to destroy all building (I think it is useless)
+	produce_strategy();
 	// Stage 4 - Time for attack base
-	// Stage 5 - 
+	
+	// Stage 5 - Update Age
+	if ((myresource > UPDATE_COST + UPDATE_COST_PLUS*state->age[ts19_flag]) && (state->age[ts19_flag]<AI))
+	{
+		updateAge();
+		myresource -= UPDATE_COST + UPDATE_COST_PLUS*state->age[ts19_flag];
+#ifdef DEBUG
+
+		file << "turn: " << state->turn << " UPDATAEAGE" << endl;
+
+#endif // DEBUG
+	}
 
 
 	return;
@@ -582,9 +809,13 @@ void excute()
 
 void f_player()
 {
-	cout << "turn: " << state->turn << endl;
-	cout << "building:" << state->building[ts19_flag].size() << endl;
-	cout << "resource: " << state->resource[ts19_flag].resource << endl;
+#ifdef DEBUG
+	file << "turn: " << state->turn << endl;
+	file << "building: " << state->building[ts19_flag].size() << endl;
+	file << "resource: " << state->resource[ts19_flag].resource << endl;
+
+#endif // DEBUG
+
 	tic();
 	if (state->turn == 0)
 	{
