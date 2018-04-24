@@ -5,7 +5,7 @@ TODO List
 
 */
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -57,6 +57,8 @@ int mindismap[MAP_SIZE][MAP_SIZE] = { 0 };//the min dis for every point to the n
 int buildmap[MAP_SIZE][MAP_SIZE] = { 0 };//0 - useless;1 - road;2 - building&base;3 - useful;
 int enemy_buildmap[MAP_SIZE][MAP_SIZE] = { 0 };//0 - useless;1 - road;2 - building&base;3 - useful;
 bool buildprogrammer_queueflag[MAP_SIZE][MAP_SIZE];
+int savearea_everypoint_dis[ROADMAX+1][MAP_SIZE][MAP_SIZE];
+bool savearea_everypoint_flag[ROADMAX];
 Position queue[MAP_SIZE*MAP_SIZE];
 Position* root = new Position[MAP_SIZE*MAP_SIZE];
 Position nextpos[MAP_SIZE][MAP_SIZE];
@@ -153,7 +155,8 @@ void init()
 {
 	for (BuildingType i = Shannon; i <= Tony_Stark; i = BuildingType(i + 1))
 		SoldierCD[OriginalBuildingAttribute[i][TARGET]] = OriginalBuildingAttribute[i][CD];
-
+	for (int i = 0; i < ROADMAX; ++i) savearea_everypoint_flag[i] = false;
+		
 	//BFS for color map generation
 
 	int head = 0, tail = 0;
@@ -905,6 +908,37 @@ bool myupgrade(int unit_id, BuildingType building_type)
 	return true;
 }
 
+bool getdis_for_savearea(int cnt)
+{
+	int head = 0, tail = 0;
+	memset((void*)buildprogrammer_queueflag, 0, sizeof(bool)*MAP_SIZE*MAP_SIZE);
+	for (int i = 0; i < saveArea[cnt].size(); ++i)
+	{
+		if (buildmap[saveArea[cnt][i].x][saveArea[cnt][i].y] == 2) continue;
+		queue[tail++] = saveArea[cnt][i];
+		buildprogrammer_queueflag[saveArea[cnt][i].x][saveArea[cnt][i].y] = true;
+		savearea_everypoint_dis[cnt][saveArea[cnt][i].x][saveArea[cnt][i].y] = 0;
+	}
+	int tmpx, tmpy;
+	while (head < tail)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			tmpx = queue[head].x + tx4[i];
+			tmpy = queue[head].y + ty4[i];
+			if ((tmpx < 0) || (tmpx >= MAP_SIZE) || (tmpy < 0) || (tmpy >= MAP_SIZE))
+				continue;
+			if (buildprogrammer_queueflag[tmpx][tmpy]) continue;
+			savearea_everypoint_dis[cnt][tmpx][tmpy] = savearea_everypoint_dis[cnt][queue[head].x][queue[head].y] + 1;
+			queue[tail++] = Position(tmpx, tmpy);
+			buildprogrammer_queueflag[tmpx][tmpy] = true;
+		}
+		++head;
+	}
+	savearea_everypoint_flag[cnt] = true;
+	return true;
+}
+
 int build_programmer(int n)
 {
 	if (myresource < OriginalBuildingAttribute[Programmer][ORIGINAL_RESOURCE]) return 0;
@@ -933,7 +967,11 @@ int build_programmer(int n)
 					buildingPos = saveArea[realcnt][i];
 				}
 			}
-			if (!flag) continue;
+			if (!flag)
+			{
+				if (state->turn == 0) break;
+				else continue;
+			}
 			if (!myConstruct(Programmer, buildingPos)) return 0;
 			else ++my_resource_num;
 			--rest_num;
@@ -942,27 +980,35 @@ int build_programmer(int n)
 		if (!flag) break;
 	}
 	
-	int head, tail, cnt = 0,real_cnt=0;
-	int tmpx, tmpy;
+	int cnt = 0,real_cnt=0;
 	
 	while (rest_num > 0)
 	{
 		if (real_cnt == ROADCNT + 1) break;
 		cnt = areasortid[real_cnt];
 		if (resource_area[cnt]) {++real_cnt; continue;}
-				
+		
 		//if (areacount[areasortid[cnt]] == 0) continue;
 		//BFS
-		head = 0;
-		tail = 0;
-		memset((void*)buildprogrammer_queueflag, 0, sizeof(bool)*MAP_SIZE*MAP_SIZE);
-		for (int i = 0; i < saveArea[cnt].size(); ++i)
-		{
-			if (buildmap[saveArea[cnt][i].x][saveArea[cnt][i].y] == 2) continue;
-			queue[tail++] = saveArea[cnt][i];
-			buildprogrammer_queueflag[saveArea[cnt][i].x][saveArea[cnt][i].y] = true;
-		}
-		
+		if (!savearea_everypoint_flag[cnt]) 
+			if (!getdis_for_savearea(cnt)) { ++real_cnt; continue; }
+		mindis = 10000;
+		for (int x=0;x<MAP_SIZE;++x)
+			for (int y=0;y<MAP_SIZE;++y)
+				if (buildmap[x][y] == 3)
+				{
+					if (savearea_everypoint_dis[cnt][x][y] < mindis)
+					{
+						mindis = savearea_everypoint_dis[cnt][x][y];
+						buildingPos = Position(x, y);
+					}
+				}
+		if (!myConstruct(Programmer, buildingPos)) return 0;
+		else ++my_resource_num;
+		--rest_num;
+		if (savearea_everypoint_dis[cnt][buildingPos.x][buildingPos.y] > BD_RANGE) continue;
+		return rest_num;
+		/*
 		while (head < tail)
 		{
 			for (int i = 0; i < 4; ++i)
@@ -984,7 +1030,7 @@ int build_programmer(int n)
 				buildprogrammer_queueflag[tmpx][tmpy] = true;
 			}
 			++head;
-		}
+		}*/
 		++real_cnt;
 	}
 	return 0;
@@ -2194,13 +2240,14 @@ void excute_army_from_base()
 	
 
 	// Stage 4 update
-	resource_update_strategy();
-
 	if (relax == -1)
 	{
 		resource_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag];
 		resource_produce_inbase_strategy();
 	}
+	resource_update_strategy();
+
+
 
 	defense_update_strategy();
 	attack_update_strategy();
@@ -2235,7 +2282,7 @@ void f_player()
 	file << "turn: " << state->turn << endl;
 	file << "building: " << state->building[ts19_flag].size() << endl;
 	file << "resource: " << state->resource[ts19_flag].resource << endl;
-
+	file << "enemyresource: " << state->resource[1-ts19_flag].resource << endl;
 #endif // DEBUG
 
 	tic();
