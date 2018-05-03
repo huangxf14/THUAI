@@ -72,6 +72,7 @@ int ENEMY_EDGE = MAP_SIZE - BASE_SIZE,MY_EDGE = BASE_SIZE - 1;
 int my_base_hp, enemy_base_hp;
 int my_bd_num = 0;
 int max_bd_point = 0;
+Age coming_age = BIT;
 
 int area_dis = 25;// 40;//the min distance for save area
 int *minareadis;//min distance from enemybase of every area
@@ -133,6 +134,7 @@ int defense_gap = 0;
 int army_road = 1;
 Age last_age = BIT;
 bool enemy_inbase = false;
+float musk_heal[ROADMAX + 1];
 
 
 //remember Musk when building
@@ -586,7 +588,7 @@ int initBuildmap()
 	can_upgrade_defense_num = 0;
 	for (int i = 0; i < BUILDING_TYPE; ++i) { my_building_num[i] = 0; enemy_building_num[i] = 0;}
 	for (int i = 0; i < state->building[ts19_flag].size(); ++i) sell_list[i] = false;
-
+	for (int i = 1; i <= ROADCNT; ++i) musk_heal[i] = 0;
 	for (int i = 0; i < ROADCNT + 1; ++i) resource_area[i] = false;
 	
 	myresource = state->resource[ts19_flag].resource;
@@ -646,14 +648,22 @@ int initBuildmap()
 				if ((kernel_pos.x != -1) || (kernel_pos.y != -1))
 				{
 					target_pos = kernel_target[defense_roadnum];
-					if ((soldier_produce_pos.x<=target_pos.x)&&(soldier_produce_pos.y<=target_pos.y)&&
-						(soldier_produce_pos.x+soldier_produce_pos.y>=kernel_pos.x+kernel_pos.y)&&
+					if ((soldier_produce_pos.x <= target_pos.x) && (soldier_produce_pos.y <= target_pos.y) &&
+						(soldier_produce_pos.x + soldier_produce_pos.y >= kernel_pos.x + kernel_pos.y) &&
 						(soldier_produce_pos.x + soldier_produce_pos.y <= kernel_pos.x + kernel_pos.y + defense_gap))
+					{
 						++soldiernum_in_road[defense_roadnum][state->building[ts19_flag][i].building_type];
+						if (state->building[ts19_flag][i].building_type == Musk)
+							musk_heal[defense_roadnum] += double(state->building[ts19_flag][i].heal) / (OriginalBuildingAttribute[Musk][ORIGINAL_HEAL] * (1 + 0.5*state->building[ts19_flag][i].level));
+					}
+						
 				}	
 			}
 		}
 	}
+	for (int i = 1; i <= ROADCNT; ++i)
+		if (musk_heal[i] < 0.5)
+			soldiernum_in_road[i][Musk] = 0;
 
 	for (int i = 0; i < state->building[1-ts19_flag].size(); ++i)
 	{
@@ -2543,7 +2553,7 @@ int build_defense_road(int road, BuildingType building_type)
 					}
 				}
 			}
-			else return -1;;
+			if (!flag) return -1;
 		}
 			
 		if (!myConstruct(building_type, pos)) return -1;
@@ -3025,6 +3035,9 @@ int attack_produce_inbase_strategy()
 			if (MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] <= my_bd_num) { sell_for_produce = true; return 0;}
 			else bd_num = build_produce_defense(bd_num, Von_Neumann, army_road);
 		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+		if (state->age[ts19_flag] >= AI) 
+			if (soldiernum_in_road[1][Tony_Stark] < 1)
+				build_produce_defense(bd_num, Tony_Stark, army_road);
 		if (state->age[ts19_flag] >= NETWORK)
 			while (bd_num > 0)
 				bd_num = build_produce_defense(bd_num, Kuen_Kao, army_road);
@@ -3250,12 +3263,13 @@ int defense_update_strategy()
 
 int update_age()
 {
-	
+	coming_age = state->age[ts19_flag];
 	if ((myresource >= UPDATE_COST + UPDATE_COST_SQUARE * state->age[ts19_flag] * state->age[ts19_flag]) && (state->age[ts19_flag]<AI))
 	{
 		updateAge();
 		++command_num;
 		myresource -= UPDATE_COST + UPDATE_COST_SQUARE * state->age[ts19_flag] * state->age[ts19_flag];
+		coming_age = Age(state->age[ts19_flag] + 1);
 #ifdef DEBUG
 
 		file << "turn: " << state->turn << " UPDATAEAGE" << endl;
@@ -3462,8 +3476,8 @@ int sell_trash_outside()
 bool useless_defense(BuildingType building_type)
 {
 	for (SoldierName i = BIT_STREAM; i < Soldier_Type; i = SoldierName(i + 1))
-		if (defense_choise[i][state->age[ts19_flag]] == building_type) return true;
-	return false;
+		if (defense_choise[i][state->age[ts19_flag]] == building_type) return false;
+	return true;
 }
 
 int sell_trash()
@@ -3649,27 +3663,49 @@ int sell_defense()
 			need_bd_point = OriginalBuildingAttribute[building_type][ORIGINAL_BUILDING_POINT];
 		need_building += (enemy_procude_num - my_produce_num) / 2;
 	}
-	//sell useless produce
+	else
+	{
+		if (need_bd_point > OriginalBuildingAttribute[Kuen_Kao][ORIGINAL_BUILDING_POINT])
+			need_bd_point = OriginalBuildingAttribute[Kuen_Kao][ORIGINAL_BUILDING_POINT];
+	}
+	
 	need_building = mymin(need_building, floor(max_bd_point / need_bd_point));
 	sell_num = 0;
-
-	if (state->age[ts19_flag] >= NETWORK)
+	//sell useless produce
+	if ((state->age[ts19_flag] >= NETWORK)||(coming_age >= NETWORK))
 		for (int i = 0; i < state->building[ts19_flag].size(); ++i)
 		{
-			if ((state->building[ts19_flag][i].building_type == Shannon)||
+			if ((state->building[ts19_flag][i].building_type == Shannon) ||
 				(state->building[ts19_flag][i].building_type == Thevenin) ||
 				(state->building[ts19_flag][i].building_type == Norton))// ||
 																		//(state->building[ts19_flag][i].building_type == Von_Neumann))
-				if (command_num < 50)
+			{
+				if ((command_num < 50) && (sell_num < floor(max_bd_point / need_bd_point)))
 				{
 					mysell(i);
 				}
-			/*if (state->age[ts19_flag] == AI)
-			if (state->building[ts19_flag][i].building_type == Berners_Lee)
-			if (command_num < 50)
-			{
-			mysell(i);
-			}*/
+				else break;
+			}
+		}
+
+	if (state->age[ts19_flag] >= AI)
+		while (command_num < 50)
+		{
+			int i = 0;
+			if (my_resource_num <= resource_num) break;
+			if (sell_num >= floor(max_bd_point / need_bd_point)) break;
+			for (; i < state->building[ts19_flag].size(); ++i)
+				if (state->building[ts19_flag][i].building_type == Programmer)
+					if (!sell_list[i])
+					{
+						if (can_produce_soldier(Position(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y))))
+						{
+							mysell(i);
+							--my_resource_num;
+							break;
+						}
+					}
+			if (i == state->building[ts19_flag].size()) break;
 		}
 	
 
@@ -3723,7 +3759,8 @@ int sell_defense()
 			if (useless_defense(building_type)) can_sell_defense = true;
 			if (can_sell_defense) mysell(sell_building);
 		}
-		if (sell_num >= need_building) return 0;
+		//if (sell_num >= need_building) return 0;
+		if (sell_num >= floor(max_bd_point / need_bd_point)) break;
 	}
 
 #ifdef DEBUG
@@ -3947,7 +3984,7 @@ void excute_defense()
 		defense_produce_defense_strategy();
 
 	// Stage 3 - Create soldier to destroy all building
-	int relax = -1;
+	int relax = 0;
 	//if (state->turn % 10 == 0)
 	//{
 	if (!sell_for_defense)
@@ -3962,7 +3999,7 @@ void excute_defense()
 		resource_produce_defense_strategy();
 	}
 	update_age();
-	sell_trash();
+	sell_defense();
 
 	resource_update_strategy();
 
