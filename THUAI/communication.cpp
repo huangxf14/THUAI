@@ -170,7 +170,7 @@ State* MyClient::recv_state()
     }
     //  cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << endl;
     int aaal;
-    regex reg0("(.*);(.*);(.*);(.*);#(.*);(.*);(.*);#");
+    regex reg0("([^;]*);([^;]*);([^;]*);([^;]*);#([^;]*);([^;]*);([^;]*);#");
     smatch m0;
     string s(save);
     regex_match(s, m0, reg0);
