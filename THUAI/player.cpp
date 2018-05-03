@@ -5,7 +5,7 @@ TODO List
 
 */
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -130,6 +130,7 @@ Position my_soldier_pos[MAP_SIZE][MAP_SIZE];
 int soldiernum_in_road[ROADMAX + 1][Building_Type];
 Position kernel_defense[ROADMAX + 1], kernel_target[ROADMAX + 1];
 int defense_gap = 0;
+int army_road = 1;
 Age last_age = BIT;
 bool enemy_inbase = false;
 
@@ -1333,8 +1334,9 @@ bool produce_setup(Position buildingpos)
 
 	//check whether need more produce
 	bool findflag = false;
-	for (int i = 0; i <= ROADMAX; ++i)
-		if (soldiernum_in_road[i][building_type] == 0) findflag = true;
+	//for (int i = 0; i <= ROADMAX; ++i)
+	//	if (soldiernum_in_road[i][building_type] == 0) findflag = true;
+	if (soldiernum_in_road[army_road][building_type] < 5) findflag = true;
 	if (!findflag) return false;
 
 	int dis = OriginalBuildingAttribute[building_type][ORIGINAL_RANGE];
@@ -1364,7 +1366,8 @@ bool produce_setup(Position buildingpos)
 
 	//delete road with soldier
 	for (int i = 0; i <= ROADMAX; ++i)
-		if (soldiernum_in_road[i][building_type] > 0)
+		if (i != army_road)
+		//if (soldiernum_in_road[i][building_type] > 0)
 			roadflag[i] = false;
 
 	//produce soldier
@@ -1424,6 +1427,40 @@ bool produce_setup(Position buildingpos)
 	return false;
 }
 
+bool can_produce_soldier(Position pos)
+{
+	int dis = OriginalBuildingAttribute[Kuen_Kao][ORIGINAL_RANGE];
+	int x = pos.x, y = pos.y;
+	//find  road to put soldier
+	for (int tx = 0; tx <= dis; ++tx)
+		for (int ty = 0; tx + ty <= dis; ++ty)
+		{
+			if (x - tx >= 0)
+			{
+				if (y - ty >= 0)
+					if (ts19_map[x - tx][y - ty] == 1) 
+						if (colormap[x-tx][y-ty]==army_road)
+							return true;
+				if (y + ty < MAP_SIZE)
+					if (ts19_map[x - tx][y + ty] == 1)
+						if (colormap[x - tx][y + ty] == army_road)
+							return true;
+			}
+			if (x + tx < MAP_SIZE)
+			{
+				if (y - ty >= 0)
+					if (ts19_map[x + tx][y - ty] == 1)
+						if (colormap[x + tx][y - ty] == army_road)
+							return true;
+				if (y + ty < MAP_SIZE)
+					if (ts19_map[x + tx][y + ty] == 1)
+						if (colormap[x + tx][y + ty] == army_road)
+							return true;
+			}
+		}
+	return false;
+}
+
 int build_programmer_defense(int n)
 {
 	if (myresource < OriginalBuildingAttribute[Programmer][ORIGINAL_RESOURCE]) return 0;
@@ -1451,7 +1488,7 @@ int build_programmer_defense(int n)
 			}
 			if (!flag) continue;
 			if (my_resource_num >= 10)
-					produceflag = produce_setup(buildingPos);
+				produceflag = produce_setup(buildingPos);
 			if (produceflag) continue;
 			if (!myConstruct(Programmer, buildingPos)) return 0;
 			else ++my_resource_num;
@@ -2387,6 +2424,9 @@ bool get_kernel(int road)
 		if ((state->age[ts19_flag] < NETWORK) ||
 			((state->age[ts19_flag] >= NETWORK) && (last_age >= NETWORK)))
 			have_kernel = true;
+		if ((state->age[ts19_flag] == AI) && (last_age < AI))
+			if (road == army_road)
+				have_kernel = false;
 	}
 	if (have_kernel)
 		if (check_kernel_withbuilding(kernel_defense[road])) return true;
@@ -2975,24 +3015,24 @@ int attack_produce_inbase_strategy()
 		{
 			if (state->age[ts19_flag] == CIRCUIT)
 				if (soldiernum_in_road[ROADCNT][Thevenin]==0)
-					build_produce_defense(1, Thevenin, ROADCNT);
+					build_produce_defense(1, Thevenin, army_road);
 			if (soldiernum_in_road[ROADCNT][Shannon] == 0)
-				build_produce_defense(1, Shannon, ROADCNT);
+				build_produce_defense(1, Shannon, army_road);
 			return 0;
 		}
 		int bd_num = 3 - soldiernum_in_road[1][Von_Neumann];
 		while (bd_num > 0)
 			if (MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] <= my_bd_num) { sell_for_produce = true; return 0;}
-			else bd_num = build_produce_defense(bd_num, Von_Neumann);
+			else bd_num = build_produce_defense(bd_num, Von_Neumann, army_road);
 		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 		if (state->age[ts19_flag] >= NETWORK)
 			while (bd_num > 0)
-				//bd_num = build_produce_defense(bd_num, Kuen_Kao,1);
-				bd_num = build_produce_defense(bd_num, Kuen_Kao,(state->turn%ROADCNT)+1);
+				bd_num = build_produce_defense(bd_num, Kuen_Kao, army_road);
+				//bd_num = build_produce_defense(bd_num, Kuen_Kao,(state->turn%ROADCNT)+1);
 		else
 		{
 			if (soldiernum_in_road[ROADCNT][Shannon] == 0)
-				build_produce_defense(1, Shannon);
+				build_produce_defense(1, Shannon,army_road);
 		}
 				
 	}
@@ -3042,7 +3082,7 @@ int defense_produce_inbase_strategy()
 	int save_turn = 5;
 	for (int i = 1; i <= ROADCNT; ++i)
 		for (int j = 0; j < Soldier_Type; ++j)
-			if ((nearest_soldierdis[i][j] - MAP_SIZE/10) <= save_turn * OriginalSoldierAttribute[j][SPEED])
+			if ((nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] -  MAP_SIZE/10) <= save_turn * OriginalSoldierAttribute[j][SPEED])
 				defense_flag = true;
 	if (!defense_flag) return 0;
 	
@@ -3061,7 +3101,7 @@ int defense_produce_inbase_strategy()
 	for (int i = 1; i <= ROADCNT; ++i)
 		for (int j = TURING_MACHINE; j <= ULTRON; ++j)
 		{
-			mindis = (nearest_soldierdis[i][j] - MAP_SIZE/10) / OriginalSoldierAttribute[j][SPEED];
+			mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED];
 			if (mindis <= save_turn)
 			{
 				build_defense_inbase(i, Musk);
@@ -3080,19 +3120,19 @@ int defense_produce_inbase_strategy()
 					if (!continueflag)
 					{
 						continueflag = true;
-						mindis = (nearest_soldierdis[i][j] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED];
+						mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED];
 						road = i;
 						soldier_type = SoldierName(j);
 						continue;
 					}
-					if (mindis >  (nearest_soldierdis[i][j] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED])
+					if (mindis >  (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED])
 					{
-						mindis = (nearest_soldierdis[i][j] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED];
+						mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED];
 						road = i;
 						soldier_type = SoldierName(j);
 						continue;
 					}
-					if (mindis == (nearest_soldierdis[i][j] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED])
+					if (mindis == (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - MAP_SIZE / 10) / OriginalSoldierAttribute[j][SPEED])
 					{
 						if (defense_order(SoldierName(j), soldier_type))
 						{
@@ -3122,7 +3162,7 @@ int defense_produce_defense_strategy()
 	int save_turn = 5;
 	for (int i = 1; i <= ROADCNT; ++i)
 		for (int j = 0; j < Soldier_Type; ++j)
-			if (nearest_soldierdis[i][j] - (MAP_SIZE >> 1) <= save_turn * OriginalSoldierAttribute[j][SPEED])
+			if (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1) <= save_turn * OriginalSoldierAttribute[j][SPEED])
 				defense_flag = true;
 	if (!defense_flag) return 0;
 
@@ -3147,7 +3187,7 @@ int defense_produce_defense_strategy()
 	for (int i = 1; i <= ROADCNT; ++i)
 		for (int j = TURING_MACHINE; j <= ULTRON; ++j)
 		{
-			mindis = (nearest_soldierdis[i][j] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
+			mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
 			if (mindis <= save_turn)
 			{
 				build_defense_road(i, Musk);
@@ -3166,19 +3206,19 @@ int defense_produce_defense_strategy()
 					if (!continueflag)
 					{
 						continueflag = true;
-						mindis = (nearest_soldierdis[i][j] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
+						mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
 						road = i;
 						soldier_type = SoldierName(j);
 						continue;
 					}
-					if (mindis > (nearest_soldierdis[i][j] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED])
+					if (mindis > (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED])
 					{
-						mindis = (nearest_soldierdis[i][j] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
+						mindis = (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED];
 						road = i;
 						soldier_type = SoldierName(j);
 						continue;
 					}
-					if (mindis == (nearest_soldierdis[i][j] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED])
+					if (mindis == (nearest_soldierdis[i][j] - OriginalSoldierAttribute[j][ATTACK_RANGE] - (MAP_SIZE >> 1)) / OriginalSoldierAttribute[j][SPEED])
 					{
 						if (defense_order(SoldierName(j), soldier_type))
 						{
@@ -3613,13 +3653,31 @@ int sell_defense()
 	need_building = mymin(need_building, floor(max_bd_point / need_bd_point));
 	sell_num = 0;
 
+	if (state->age[ts19_flag] >= NETWORK)
+		for (int i = 0; i < state->building[ts19_flag].size(); ++i)
+		{
+			if ((state->building[ts19_flag][i].building_type == Shannon)||
+				(state->building[ts19_flag][i].building_type == Thevenin) ||
+				(state->building[ts19_flag][i].building_type == Norton))// ||
+																		//(state->building[ts19_flag][i].building_type == Von_Neumann))
+				if (command_num < 50)
+				{
+					mysell(i);
+				}
+			/*if (state->age[ts19_flag] == AI)
+			if (state->building[ts19_flag][i].building_type == Berners_Lee)
+			if (command_num < 50)
+			{
+			mysell(i);
+			}*/
+		}
+	
+
 #ifdef DEBUG
 	file << "sell_for defense:" << sell_for_defense << endl;
 	file << "myresource :" << my_resource_num << "  resource_num:  " << resource_num << endl;
 #endif // DEBUG
-
-
-	if (sell_num >= need_building) return 0;
+	
 	//sell useless defense
 	//sell in the sort of heal
 	bool sell_flag = true, can_sell_defense = true;
@@ -3654,8 +3712,10 @@ int sell_defense()
 			kernel_pos = kernel_defense[color];
 			if ((kernel_pos.x != -1) || (kernel_pos.y != -1))
 			{
+				int error_gap = defense_gap;
+				if (building_type != Mole) error_gap >>= 1;
 				target_pos = kernel_target[color];
-				if ((tmppos.x <= target_pos.x) && (tmppos.y <= target_pos.y) &&
+				if ((tmppos.x <= target_pos.x + error_gap) && (tmppos.y <= target_pos.y + error_gap) &&
 					(tmppos.x + tmppos.y >= kernel_pos.x + kernel_pos.y) &&
 					(tmppos.x + tmppos.y <= kernel_pos.x + kernel_pos.y + defense_gap))
 					can_sell_defense = false;
@@ -3669,7 +3729,7 @@ int sell_defense()
 #ifdef DEBUG
 	file << "useless defense: " << sell_num << endl;
 #endif // DEBUG
-
+	if (sell_num >= need_building) return 0;
 	//sell useless resource
 	int min_programmer_level, min_programmer_heal, sell_programmer_id;
 	while (command_num < 50)
@@ -3681,6 +3741,13 @@ int sell_defense()
 			if (state->building[ts19_flag][i].building_type == Programmer)
 				if (!sell_list[i])
 				{
+					if (can_produce_soldier(Position(trans(state->building[ts19_flag][i].pos.x), trans(state->building[ts19_flag][i].pos.y))))
+					{
+						min_programmer_heal = state->building[ts19_flag][i].heal;
+						min_programmer_level = state->building[ts19_flag][i].level;
+						sell_programmer_id = i;
+						break;
+					}
 					if (min_programmer_level < state->building[ts19_flag][i].level) continue;
 					if (min_programmer_level > state->building[ts19_flag][i].level)
 					{
@@ -3854,7 +3921,7 @@ void excute_army_from_base()
 
 void excute_defense()
 {
-	int resource_limit[6] = { 30,30,60,60,60,40 };
+	int resource_limit[6] = { 30,30,60,60,60,30 };
 	initBuildmap();
 	soldierSituation();
 
