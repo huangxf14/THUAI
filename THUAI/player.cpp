@@ -3009,6 +3009,8 @@ int attack_produce_inbase_strategy()
 	if (state->age[ts19_flag] < PROCESSOR)
 		if (enemy_procude_num == 0)
 			return -1;
+	
+	army_road = state->turn%ROADCNT + 1;
 
 	//Construct produce building
 	if (nearest_enemybuilding_dis < (MAP_SIZE >> 1))
@@ -3024,19 +3026,19 @@ int attack_produce_inbase_strategy()
 		if (state->age[ts19_flag] < PROCESSOR)
 		{
 			if (state->age[ts19_flag] == CIRCUIT)
-				if (soldiernum_in_road[ROADCNT][Thevenin]==0)
+				if (soldiernum_in_road[army_road][Thevenin]==0)
 					build_produce_defense(1, Thevenin, army_road);
-			if (soldiernum_in_road[ROADCNT][Shannon] == 0)
+			if (soldiernum_in_road[army_road][Shannon] == 0)
 				build_produce_defense(1, Shannon, army_road);
 			return 0;
 		}
-		int bd_num = 3 - soldiernum_in_road[1][Von_Neumann];
+		int bd_num = 3 - soldiernum_in_road[army_road][Von_Neumann];
 		while (bd_num > 0)
 			if (MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] <= my_bd_num) { sell_for_produce = true; return 0;}
 			else bd_num = build_produce_defense(bd_num, Von_Neumann, army_road);
 		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 		if (state->age[ts19_flag] >= AI) 
-			if (soldiernum_in_road[1][Tony_Stark] < 1)
+			if (soldiernum_in_road[army_road][Tony_Stark] < 1)
 				build_produce_defense(bd_num, Tony_Stark, army_road);
 		if (state->age[ts19_flag] >= NETWORK)
 			while (bd_num > 0)
@@ -3044,7 +3046,7 @@ int attack_produce_inbase_strategy()
 				//bd_num = build_produce_defense(bd_num, Kuen_Kao,(state->turn%ROADCNT)+1);
 		else
 		{
-			if (soldiernum_in_road[ROADCNT][Shannon] == 0)
+			if (soldiernum_in_road[army_road][Shannon] == 0)
 				build_produce_defense(1, Shannon,army_road);
 		}
 				
@@ -3475,6 +3477,7 @@ int sell_trash_outside()
 
 bool useless_defense(BuildingType building_type)
 {
+	if (building_type == Musk) return false;
 	for (SoldierName i = BIT_STREAM; i < Soldier_Type; i = SoldierName(i + 1))
 		if (defense_choise[i][state->age[ts19_flag]] == building_type) return false;
 	return true;
@@ -3999,7 +4002,8 @@ void excute_defense()
 		resource_produce_defense_strategy();
 	}
 	update_age();
-	sell_defense();
+	if (!enemy_inbase)
+		sell_defense();
 
 	resource_update_strategy();
 
