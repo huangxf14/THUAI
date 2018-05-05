@@ -92,7 +92,7 @@ int enemy_procude_num = 0, my_produce_num = 0, my_defense_num = 0;
 int my_building_num[Building_Type] = { 0 }, enemy_building_num[Building_Type] = { 0 };
 int sell_num = 0;
 bool sell_list[BUILDINGMAX];
-int building_base_dis[Building_Type] = { 1,1,1,1,1,1,1,1,1,15,15,25,30,30,30,32,30,1 };
+int building_base_dis[Building_Type] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
 
 inline int trans(int x)//Use this everywhere when x means pos
 {
@@ -131,7 +131,7 @@ Position my_soldier_pos[MAP_SIZE][MAP_SIZE];
 int soldiernum_in_road[ROADMAX + 1][Building_Type];
 Position kernel_defense[ROADMAX + 1], kernel_target[ROADMAX + 1];
 int defense_gap = 0;
-int army_road = 1;
+int army_road = 1, help_road = 2;
 Age last_age = BIT;
 bool enemy_inbase = false;
 float musk_heal[ROADMAX + 1];
@@ -1449,22 +1449,22 @@ bool can_produce_soldier(Position pos)
 			{
 				if (y - ty >= 0)
 					if (ts19_map[x - tx][y - ty] == 1) 
-						if (colormap[x-tx][y-ty]==army_road)
+						if ((colormap[x-tx][y-ty]==army_road)||(colormap[x - tx][y - ty] == help_road))
 							return true;
 				if (y + ty < MAP_SIZE)
 					if (ts19_map[x - tx][y + ty] == 1)
-						if (colormap[x - tx][y + ty] == army_road)
+						if ((colormap[x - tx][y + ty] == army_road) || (colormap[x - tx][y + ty] == help_road))
 							return true;
 			}
 			if (x + tx < MAP_SIZE)
 			{
 				if (y - ty >= 0)
 					if (ts19_map[x + tx][y - ty] == 1)
-						if (colormap[x + tx][y - ty] == army_road)
+						if ((colormap[x + tx][y - ty] == army_road) || (colormap[x + tx][y - ty] == help_road))
 							return true;
 				if (y + ty < MAP_SIZE)
 					if (ts19_map[x + tx][y + ty] == 1)
-						if (colormap[x + tx][y + ty] == army_road)
+						if ((colormap[x + tx][y + ty] == army_road) || (colormap[x + tx][y + ty] == help_road))
 							return true;
 			}
 		}
@@ -2557,7 +2557,7 @@ int build_defense_road(int road, BuildingType building_type)
 		}
 			
 		if (!myConstruct(building_type, pos)) return -1;
-		soldiernum_in_road[road][building_type] += 1;
+		++soldiernum_in_road[road][building_type];
 		defense_road[pos.x][pos.y] = road;
 	}
 
@@ -3010,10 +3010,10 @@ int attack_produce_inbase_strategy()
 		if (enemy_procude_num == 0)
 			return -1;
 	
-	army_road = state->turn%ROADCNT + 1;
+	//army_road = state->turn%ROADCNT + 1;
 
 	//Construct produce building
-	if (nearest_enemybuilding_dis < (MAP_SIZE >> 1))
+	if ((nearest_enemybuilding_dis < (MAP_SIZE)) && (state->turn < 30))
 	{
 		int bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 		if ((bd_num <= 0) && (state->age[ts19_flag] == AI)) { sell_for_produce = true; return 0; }
@@ -3036,10 +3036,25 @@ int attack_produce_inbase_strategy()
 		while (bd_num > 0)
 			if (MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] <= my_bd_num) { sell_for_produce = true; return 0;}
 			else bd_num = build_produce_defense(bd_num, Von_Neumann, army_road);
-		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+		bd_num = 3 - soldiernum_in_road[help_road][Von_Neumann];
+		while (bd_num > 0)
+			if (MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] <= my_bd_num) break;
+			else bd_num = build_produce_defense(bd_num, Von_Neumann, help_road);
+
+		
+		if (state->age[ts19_flag] >= AI)
+			if (2 * soldiernum_in_road[help_road][Tony_Stark] < soldiernum_in_road[army_road][Tony_Stark])
+				build_produce_defense(1, Tony_Stark, help_road);
 		if (state->age[ts19_flag] >= AI) 
-			if (soldiernum_in_road[army_road][Tony_Stark] < 1)
-				build_produce_defense(bd_num, Tony_Stark, army_road);
+			if (5 * soldiernum_in_road[army_road][Tony_Stark] < soldiernum_in_road[army_road][Kuen_Kao])
+				build_produce_defense(1, Tony_Stark, army_road);
+
+		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+		if (state->age[ts19_flag] >= NETWORK)
+			if (2 * soldiernum_in_road[help_road][Kuen_Kao] < soldiernum_in_road[army_road][Kuen_Kao])
+				build_produce_defense((soldiernum_in_road[army_road][Kuen_Kao]>>1) - soldiernum_in_road[help_road][Kuen_Kao], Kuen_Kao, help_road);
+
+		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 		if (state->age[ts19_flag] >= NETWORK)
 			while (bd_num > 0)
 				bd_num = build_produce_defense(bd_num, Kuen_Kao, army_road);
@@ -3049,6 +3064,7 @@ int attack_produce_inbase_strategy()
 			if (soldiernum_in_road[army_road][Shannon] == 0)
 				build_produce_defense(1, Shannon,army_road);
 		}
+
 				
 	}
 
@@ -3159,10 +3175,11 @@ int defense_produce_inbase_strategy()
 					}
 				}
 		if (!continueflag) break;
-		if (mindis >= save_turn) break;
+		if (mindis >= save_turn) break;		
 		defense_road_soldier[road][soldier_type] = true;
 		building_type = defense_choise[soldier_type][state->age[ts19_flag]];
 		if (building_type == __Base) continue;
+		if (building_type == Mole) continue;
 		//if ((soldier_type == TURING_MACHINE) || (soldier_type = ULTRON)) build_defense_inbase(road, Musk);
 		build_defense_inbase(road, building_type);	
 	}
@@ -3697,6 +3714,7 @@ int sell_defense()
 			int i = 0;
 			if (my_resource_num <= resource_num) break;
 			if (sell_num >= floor(max_bd_point / need_bd_point)) break;
+
 			for (; i < state->building[ts19_flag].size(); ++i)
 				if (state->building[ts19_flag][i].building_type == Programmer)
 					if (!sell_list[i])
@@ -3972,7 +3990,7 @@ void excute_defense()
 	resource_produce_defense_strategy();
 	//if (state->age[ts19_flag] == BIT) { update_age(); return; }
 	// Stage 2 - Build to defense
-	if (nearest_enemybuilding_dis < (MAP_SIZE >> 1))
+	if ((nearest_enemybuilding_dis < (MAP_SIZE))&&(state->turn<30))
 	{
 		enemy_inbase = true;
 		if (setup_control)
@@ -4053,6 +4071,7 @@ void f_player()
 		{
 			init();
 			//Setup_inbase();
+			army_road = ROADCNT; help_road = ROADCNT - 1;
 			Setup_defense();
 		}
 		else excute_defense();
