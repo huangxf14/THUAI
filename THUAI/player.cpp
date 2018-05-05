@@ -2570,9 +2570,11 @@ int build_defense_outside(Position pos, BuildingType building_type)
 	if (my_bd_num >= MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag]) return 0;
 	//LOGN("TRY DEFENSE");
 	int x = pos.x, y = pos.y;
-	for (int tx = 0; tx <= dis; ++tx)
-		for (int ty = 0; tx + ty <= dis; ++ty)
+	for (int tmpdis = 1;tmpdis<=dis;++tmpdis)
+		for (int tx = 0; tx <= tmpdis; ++tx)
+		//for (int ty = 0; tx + ty <= dis; ++ty)
 		{
+			int ty = tmpdis - tx;
 			if (x - tx >= 0)
 			{
 				if (y - ty >= 0)
@@ -2868,7 +2870,7 @@ int attack_produce_strategy()
 	}
 
 	//Construct produce building
-	int bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] + 1 - state->building[ts19_flag].size();
+	int bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 	BuildingType building_type;
 	if (ts19_flag <= 2)
 	{
@@ -2956,7 +2958,7 @@ int attack_produce_strategy()
 		while (von_num > 0)
 			von_num= build_produce(von_num, Von_Neumann);
 	}
-
+	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 	while (bd_num > 0)
 		bd_num = build_produce(bd_num, building_type);
 	return 0;
@@ -3096,7 +3098,7 @@ int defense_produce_strategy()
 	{
 		if (OriginalSoldierAttribute[iter->soldier_type][ACTION_MODE] == MOVING_ATTACK) continue;
 		//LOG(iter->fire); LOG("  "); LOGN(float(OriginalSoldierAttribute[iter->soldier_type][SOLDIER_ORIGINAL_HEAL]) / SoldierCD[iter->soldier_type]);
-		if (iter->fire >= float(OriginalSoldierAttribute[iter->soldier_type][SOLDIER_ORIGINAL_HEAL])/SoldierCD[iter->soldier_type]-0.0001) continue;
+		if (iter->fire >= float(OriginalSoldierAttribute[iter->soldier_type][SOLDIER_ORIGINAL_HEAL])/(SoldierCD[iter->soldier_type]+0.00000001)-0.1) continue;
 		if (!build_defense_outside(iter->pos, defense_choice_outside[iter->soldier_type][state->age[ts19_flag]])) return 0;
 		if (iter->soldier_type==ULTRON)
 			if (!iter->musk)
@@ -4065,7 +4067,7 @@ void f_player()
 	tic();
 	command_num = 0;
 	max_bd_point = state->resource[ts19_flag].building_point;
-	if (ts19_flag >= -1)
+	if (ts19_flag >= 2)
 	{
 		if (state->turn == 0)
 		{
