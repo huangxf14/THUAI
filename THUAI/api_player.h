@@ -119,14 +119,14 @@ enum ActionMode {
 //   type                 hp   attack   range  target          age       resurce bd_point  aoe   cd
 const int OriginalBuildingAttribute[Building_Type][Attr_Num] = {
     {Base,              10000,  _NULL,  0,    _NULL,           BIT,       0,      _NULL, _NULL,  _NULL},
-    {PRODUCTION_BUILDING, 120,  _NULL,  10,   BIT_STREAM,      BIT,       150,    15,     _NULL, 2},
-    {PRODUCTION_BUILDING, 160,  _NULL,  12,   VOLTAGE_SOURCE,  CIRCUIT,   160,    16,    _NULL,  6},
-    {PRODUCTION_BUILDING, 150,  _NULL,  8,    CURRENT_SOURCE,  CIRCUIT,   160,    16,    _NULL,  4},
-    {PRODUCTION_BUILDING, 200,  _NULL,  15,   ENIAC,           PROCESSOR, 200,    20,    _NULL,  15},
-    {PRODUCTION_BUILDING, 150,  _NULL,  10,   PACKET,          NETWORK,   250,    25,    _NULL,  3},
-    {PRODUCTION_BUILDING, 160,  _NULL,  12,   OPTICAL_FIBER,   NETWORK,   400,    40,    _NULL,  6},
-    {PRODUCTION_BUILDING, 250,  _NULL,  15,   TURING_MACHINE,  AI,        600,    60,    _NULL,  8},
-    {PRODUCTION_BUILDING, 220, _NULL,   8,    ULTRON,          AI,        600,    60,    _NULL,  20},
+    {PRODUCTION_BUILDING, 120,  _NULL,  10,   BIT_STREAM,      BIT,       150,    15,     _NULL, 3},
+    {PRODUCTION_BUILDING, 160,  _NULL,  12,   VOLTAGE_SOURCE,  CIRCUIT,   160,    16,    _NULL,  7},
+    {PRODUCTION_BUILDING, 150,  _NULL,  8,    CURRENT_SOURCE,  CIRCUIT,   160,    16,    _NULL,  5},
+    {PRODUCTION_BUILDING, 200,  _NULL,  15,   ENIAC,           PROCESSOR, 200,    20,    _NULL,  16},
+    {PRODUCTION_BUILDING, 150,  _NULL,  10,   PACKET,          NETWORK,   250,    25,    _NULL,  4},
+    {PRODUCTION_BUILDING, 160,  _NULL,  12,   OPTICAL_FIBER,   NETWORK,   400,    40,    _NULL,  7},
+    {PRODUCTION_BUILDING, 250,  _NULL,  15,   TURING_MACHINE,  AI,        600,    60,    _NULL,  9},
+    {PRODUCTION_BUILDING, 220, _NULL,   8,    ULTRON,          AI,        600,    60,    _NULL,  21},
 
     {DEFENSIVE_BUILDING,  220,  16,     32,   DATA,            BIT,       150,    15,    0,      1},
     {DEFENSIVE_BUILDING,  320,  20,     30,   SUBSTANCE,       CIRCUIT,   200,    20,    6,      3},
