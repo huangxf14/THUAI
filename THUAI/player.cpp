@@ -5,7 +5,7 @@ TODO List
 
 */
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -74,7 +74,7 @@ int my_bd_num = 0;
 int max_bd_point = 0;
 Age coming_age = BIT;
 
-int area_dis = 13;// 25;// 40;//the min distance for save area
+int area_dis = 21;// 40;//the min distance for save area
 int *minareadis;//min distance from enemybase of every area
 int *areacount;//the cnt of allowed point of every area
 int *areasortid;//sort area by the dis from enemybase(short to long)
@@ -93,6 +93,7 @@ int my_building_num[Building_Type] = { 0 }, enemy_building_num[Building_Type] = 
 int sell_num = 0;
 bool sell_list[BUILDINGMAX];
 int building_base_dis[Building_Type] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+bool first_time = true;
 
 inline int trans(int x)//Use this everywhere when x means pos
 {
@@ -1004,7 +1005,7 @@ int initFiremap()
 			if (needfiremap_inbase[i][Larry_Roberts] > ceil(OriginalSoldierAttribute[CURRENT_SOURCE][SOLDIER_ORIGINAL_HEAL] / OriginalBuildingAttribute[Larry_Roberts][ORIGINAL_ATTACK]))
 			{
 				needfiremap_inbase[i][Larry_Roberts] = ceil(OriginalSoldierAttribute[CURRENT_SOURCE][SOLDIER_ORIGINAL_HEAL] / OriginalBuildingAttribute[Larry_Roberts][ORIGINAL_ATTACK]);
-				needfiremap_inbase[i][Larry_Roberts] = ceil(OriginalSoldierAttribute[OPTICAL_FIBER][SOLDIER_ORIGINAL_HEAL] / OriginalBuildingAttribute[Larry_Roberts][ORIGINAL_ATTACK]);
+				needfiremap_inbase[i][Larry_Roberts] = 2 + ceil(OriginalSoldierAttribute[OPTICAL_FIBER][SOLDIER_ORIGINAL_HEAL] / OriginalBuildingAttribute[Larry_Roberts][ORIGINAL_ATTACK]);
 			}
 			needfiremap_inbase[i][Larry_Roberts] *= MAX_FIRE;
 		}
@@ -1213,7 +1214,7 @@ int build_programmer(int n)
 	int rest_num = n;
 	bool flag;
 	int mindis,dis;
-
+	if (!first_time)
 	while (rest_num > 0)
 	{
 		mindis = 10000;
@@ -1245,6 +1246,7 @@ int build_programmer(int n)
 		if (!flag) break;
 	}
 	
+	//first_time = false;
 	int cnt = 0,real_cnt=0;
 	
 	while (rest_num > 0)
@@ -1272,6 +1274,7 @@ int build_programmer(int n)
 		else ++my_resource_num;
 		--rest_num;
 		if (savearea_everypoint_dis[cnt][buildingPos.x][buildingPos.y] > MAX_BD_RANGE) continue;
+		else first_time = false;
 		return rest_num;
 		/*
 		while (head < tail)
@@ -1343,6 +1346,7 @@ int build_programmer_inbase(int n)
 
 bool produce_setup(Position buildingpos)
 {
+	//return false;
 	if (!setup_control) return false;
 	if (state->age[ts19_flag] > CIRCUIT) return false;
 
@@ -3186,11 +3190,6 @@ int attack_produce_inbase_strategy()
 	if (state->age[ts19_flag] < PROCESSOR)
 		if (enemy_procude_num == 0)
 			return -1;
-	
-	army_road = state->turn%8+1; 
-	if (army_road == 7) army_road = (1 + ROADCNT) >> 1;
-	else if (army_road == 8) army_road = ROADCNT;
-	help_road = army_road;
 
 	//Construct produce building
 	if ((nearest_enemybuilding_dis < (MAP_SIZE)) && (state->turn < 30))
@@ -3230,6 +3229,9 @@ int attack_produce_inbase_strategy()
 		if (state->age[ts19_flag] >= AI) 
 			if (5 * soldiernum_in_road[army_road][Tony_Stark] < soldiernum_in_road[army_road][Kuen_Kao])
 				build_produce_defense(1, Tony_Stark, army_road);
+
+		if (4 * soldiernum_in_road[army_road][Von_Neumann] < soldiernum_in_road[army_road][Kuen_Kao])
+			build_produce_defense(1, Von_Neumann, army_road);
 
 		bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 		if (state->age[ts19_flag] >= NETWORK)
@@ -4129,9 +4131,9 @@ void excute()
 	// Stage 4 update
 	update_age();
 	sell_trash_outside();
-	resource_update_strategy();
-	defense_update_strategy();
 	attack_update_strategy();
+	defense_update_strategy();
+	resource_update_strategy();
 	maintain();
 	// Stage 5 - Update Age
 	
@@ -4180,7 +4182,7 @@ void excute_defenseinbase()
 	initBuildmap();
 	Getsoldierpoint();
 	//soldierSituation();
-	if ((nearest_enemybuilding_dis < (MAP_SIZE+50)) && (state->turn<30))
+	if ((nearest_enemybuilding_dis < (MAP_SIZE+30)) && (state->turn<30))
 	{
 		enemy_inbase = true;
 	}
@@ -4372,17 +4374,17 @@ void f_player()
 	file << "resource: " << state->resource[ts19_flag].resource << endl;
 	file << "enemyresource: " << state->resource[1-ts19_flag].resource << endl;
 #endif // DEBUG
-
+	
 	tic();
 	command_num = 0;
 	max_bd_point = state->resource[ts19_flag].building_point;
-	if (ts19_flag >= -1)
+	if (ts19_flag >= 2)
 	{
 		if (state->turn == 0)
 		{
 			init();
 			//Setup_inbase();
-			army_road = 0; help_road = 1;
+			army_road = 1; help_road = 2;
 			Setup_defense();
 		}
 		else excute_defense();

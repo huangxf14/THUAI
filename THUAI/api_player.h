@@ -126,16 +126,16 @@ const int OriginalBuildingAttribute[Building_Type][Attr_Num] = {
     {PRODUCTION_BUILDING, 150,  _NULL,  10,   PACKET,          NETWORK,   250,    25,    _NULL,  4},
     {PRODUCTION_BUILDING, 160,  _NULL,  12,   OPTICAL_FIBER,   NETWORK,   400,    40,    _NULL,  7},
     {PRODUCTION_BUILDING, 250,  _NULL,  15,   TURING_MACHINE,  AI,        600,    60,    _NULL,  9},
-    {PRODUCTION_BUILDING, 220, _NULL,   8,    ULTRON,          AI,        600,    60,    _NULL,  21},
+    {PRODUCTION_BUILDING, 220,  _NULL,   8,    ULTRON,          AI,        600,    60,    _NULL,  21},
 
     {DEFENSIVE_BUILDING,  220,  16,     32,   DATA,            BIT,       150,    15,    0,      1},
     {DEFENSIVE_BUILDING,  320,  20,     30,   SUBSTANCE,       CIRCUIT,   200,    20,    6,      3},
-    {DEFENSIVE_BUILDING,  250,  4,      36,   DATA,            PROCESSOR, 225,    22,    0,      1},
+    {DEFENSIVE_BUILDING,  250,  4,      36,   SUBSTANCE,       PROCESSOR, 225,    22,    0,      1},
     {DEFENSIVE_BUILDING,  350,  25,     50,   SUBSTANCE,       ALGORITHM, 200,    20,    0,      2},
     {DEFENSIVE_BUILDING,  220,  6,      40,   ALL,             NETWORK,   250,    25,    8,      1},
     {DEFENSIVE_BUILDING,  520,  5,      35,   DATA,            NETWORK,   450,    45,    0,      1},
     {DEFENSIVE_BUILDING,  750,  0,      15,   ALL,             AI,        500,    50,    0,      1},
-    {DEFENSIVE_BUILDING,  480, INT_MAX, 20,   ALL,             AI,        500,    50,    2,      2},
+    {DEFENSIVE_BUILDING,  360, INT_MAX, 20,   ALL,             AI,        500,    50,    2,      2},
 
     {RESOURCE_BUILDING,   100,  10,     _NULL,_NULL,          _NULL,      100,    10, _NULL,  _NULL}
 };
