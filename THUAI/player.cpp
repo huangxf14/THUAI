@@ -4,7 +4,7 @@ TODO List
 - check resource
 */
 
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -1369,7 +1369,7 @@ bool produce_setup(Position buildingpos)
 {
 	//return false;
 	if (!setup_control) return false;
-	if (state->age[ts19_flag] > CIRCUIT) return false;
+	if (state->age[ts19_flag] >= CIRCUIT) return false;
 
 	BuildingType building_type;
 	if (state->age[ts19_flag] == CIRCUIT) building_type = Thevenin;
@@ -1377,9 +1377,9 @@ bool produce_setup(Position buildingpos)
 
 	//check whether need more produce
 	bool findflag = false;
-	//for (int i = 0; i <= ROADMAX; ++i)
-	//	if (soldiernum_in_road[i][building_type] == 0) findflag = true;
-	if (soldiernum_in_road[army_road][building_type] < 5) findflag = true;
+	for (int i = 0; i <= ROADMAX; ++i)
+		if (soldiernum_in_road[i][building_type] == 0) findflag = true;
+	//if (soldiernum_in_road[army_road][building_type] < 5) findflag = true;
 	if (!findflag) return false;
 
 	int dis = OriginalBuildingAttribute[building_type][ORIGINAL_RANGE];
@@ -1409,8 +1409,8 @@ bool produce_setup(Position buildingpos)
 
 	//delete road with soldier
 	for (int i = 0; i <= ROADMAX; ++i)
-		if (i != army_road)
-		//if (soldiernum_in_road[i][building_type] > 0)
+		//if (i != army_road)
+		if (soldiernum_in_road[i][building_type] > 0)
 			roadflag[i] = false;
 
 	//produce soldier
@@ -3373,42 +3373,38 @@ int attack_produce_strategy()
 	{
 		if (my_furthest_dist < (MAP_SIZE >> 1)) first_produce = false;
 	}
-	if (ts19_flag <= 2)
-	{
+	
 		building_type = Shannon;
 		if (!first_produce)
 			if (state->age[ts19_flag] > BIT)
 				building_type = Norton;
 		if (ohm_count >= max_ohm_count) building_type = Shannon;
+		if (state->age[ts19_flag] > CIRCUIT)
+		{
+			if ((my_building_num[Norton] > 15) && (enemy_building_num[Shannon] > my_building_num[Shannon]))
+				building_type = Shannon;
+		}
 		if ((enemy_inbase) && (bool_count == 0))
 		{
 			building_type = Shannon;
 			if (state->age[ts19_flag] > BIT)
-				if (ohm_count < 1)
-					if ((state->age[1-ts19_flag] >= CIRCUIT)&&(enemy_base_hp < 13000))
-					//if (state->age[ts19_flag] > CIRCUIT)
+				if (ohm_count <= 1)
+					if (((state->age[1-ts19_flag] >= CIRCUIT)&&(enemy_base_hp < 13000))
+						||(state->age[ts19_flag] > CIRCUIT))
 						building_type = Norton;
 		}
+
+	
+
 		if (state->age[ts19_flag] == NETWORK)
 		{
-#ifdef DEBUG
-			file << "larry_count: " << larry_count << endl;
-
-#endif // DEBUG
 			if (larry_count >= 6)
 			{
-				//if (!no_norton)
-				//{
 					if (ohm_count < max_ohm_count) building_type = Norton;
 					else
 					{
-						//no_norton = true;
-						//building_type = Thevenin;
 						building_type = Shannon;
 					}
-					
-				//}
-				//else building_type = Thevenin;
 			}
 			else building_type = Berners_Lee;
 		}
@@ -3422,7 +3418,7 @@ int attack_produce_strategy()
 				//building_type = Shannon;
 			}
 		}
-	}
+	
 
 	if ((state->age[ts19_flag] == PROCESSOR)||(state->age[ts19_flag] == ALGORITHM))
 	{
@@ -3430,13 +3426,11 @@ int attack_produce_strategy()
 		if ((ohm_count>0)||(larry_count>0))
 			if (von_num > 0)
 				build_produce(1, Von_Neumann);*/
-
-
 		if ((ohm_count > 0) || (larry_count > 0))
 			if (my_building_num[Von_Neumann] < 2)
 				build_produce(1, Von_Neumann);
 	}
-	if (state->age[ts19_flag] >= NETWORK)
+	if ((state->age[ts19_flag] >= NETWORK)&&(building_type!=Berners_Lee))
 	{
 		int von_num = my_building_num[Shannon] + my_building_num[Thevenin] - my_building_num[Von_Neumann];
 		if ((ohm_count>0) || (larry_count>0))
@@ -3448,9 +3442,10 @@ int attack_produce_strategy()
 	if (building_type != Shannon)
 		if (state->age[ts19_flag] < NETWORK)
 			if (my_building_num[Shannon] == 0)
-				if ((bd_num < 7) || (state->age[ts19_flag] > CIRCUIT))
+				//if ((bd_num < 7) || (state->age[ts19_flag] > CIRCUIT))
 					build_produce(1, Shannon);
 
+	//if (building_type == Shannon) building_type = Norton;
 	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 	while (bd_num > 0)
 		bd_num = build_produce(bd_num, building_type);
@@ -3637,7 +3632,7 @@ bool defense_order(SoldierName x, SoldierName y)
 int defense_produce_strategy()
 {
 	//if (my_produce_num + (MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) - state->building[ts19_flag].size() < 5) return 0;
-	int num_dis = int(state->age[ts19_flag]) + 2;
+	int num_dis = int(state->age[ts19_flag]) + 1;
 	if (num_dis > 4) num_dis = 4;
 
 	//if (my_produce_num < num_dis * my_defense_num) return 0;
@@ -4488,8 +4483,8 @@ void Setup_defense()
 
 void excute()
 {
-	//int resource_limit[6] = { 40,30,40,60,40,20 };
-	int resource_limit[6] = { 33,30,40,60,40,20 };
+	int resource_limit[6] = { 40,30,40,60,40,20 };
+	//int resource_limit[6] = { 33,30,40,60,40,20 };
 	initBuildmap();
 	Getsoldierpoint();
 	//soldierSituation();
@@ -4498,14 +4493,14 @@ void excute()
 	// Stage 1 - Get resource
 	resource_num = resource_limit[state->age[ts19_flag]];
 	resource_produce_strategy();
-	//if (state->age[ts19_flag] == BIT) { update_age(); return; }
+	if (state->age[ts19_flag] == BIT) { update_age(); return; }
 	// Stage 2 - Build to defense
 	//defense_produce_strategy();
 
 	// Stage 3 - Create soldier to destroy all building
 	//if (state->turn%10==0)
-	attack_produce_test_strategy();
-	//attack_produce_strategy();
+	//attack_produce_test_strategy();
+	attack_produce_strategy();
 
 	// Stage 4 update
 	update_age();
@@ -4760,24 +4755,47 @@ void f_player()
 	tic();
 	command_num = 0;
 	max_bd_point = state->resource[ts19_flag].building_point;
+	//if (ts19_flag >= -1)
+	//{
+	//	if (state->turn == 0)
+	//	{
+	//		init();
+	//		//Setup_inbase();
+	//		army_road = (ROADCNT+1)>>1; help_road = army_road;
+	//		Setup_defense();
+	//	}
+	//	else excute_defense();
+	//	//else excute_army_from_base();
+	//}
+	//else
+	//{
+	//	if (state->turn == 0)
+	//	{
+	//		init();
+	//		Setup(); 
+
+	//	}
+	//	//else excute();
+	//	else excute_defenseinbase();
+	//}
+
 	if (ts19_flag >= 1)
 	{
 		if (state->turn == 0)
 		{
 			init();
-			//Setup_inbase();
-			army_road = 1; help_road = 2;
-			Setup_defense();
+			Setup();
+
 		}
-		else excute_defense();
-		//else excute_army_from_base();
+		else excute();
+		//else excute_defenseinbase();
 	}
 	else
 	{
 		if (state->turn == 0)
 		{
 			init();
-			Setup(); 
+			Setup();
 
 		}
 		//else excute();
