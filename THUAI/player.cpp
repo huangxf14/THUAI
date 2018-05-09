@@ -383,6 +383,11 @@ void init()
 	areasortid = new int[ROADCNT + 1];
 	saveArea = new std::vector<Position>[ROADCNT + 1];
 	saveArea_enemydis = new std::vector<int>[ROADCNT + 1];
+	for (int i = 0; i <= ROADCNT; ++i)
+	{
+		saveArea[i].reserve((MAP_SIZE*MAP_SIZE)>>1);
+		saveArea_enemydis[i].reserve((MAP_SIZE*MAP_SIZE) >> 1);
+	}
 	resource_area = new bool[ROADCNT + 1];
 	int tmpcolor,tmp_enemy_base_dis;
 	LOG("GenerateArea");
@@ -3438,6 +3443,14 @@ int attack_produce_strategy()
 			while (von_num > 0)
 				von_num = build_produce(von_num, Von_Neumann);
 	}
+
+	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+	if (building_type != Shannon)
+		if (state->age[ts19_flag] < NETWORK)
+			if (my_building_num[Shannon] == 0)
+				if ((bd_num < 7) || (state->age[ts19_flag] > CIRCUIT))
+					build_produce(1, Shannon);
+
 	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 	while (bd_num > 0)
 		bd_num = build_produce(bd_num, building_type);
@@ -3640,7 +3653,9 @@ int defense_produce_strategy()
 	}
 
 	if (my_produce_num < num_dis * my_defense_num) return 0;
-	if (enemy_procude_num - 1 <= my_defense_num) return 0;
+	if ((enemy_procude_num>1)&&(enemy_procude_num - 1 <= my_defense_num)) return 0;
+	if ((enemy_procude_num == 1) && (enemy_procude_num <= my_defense_num)) return 0;
+	if (enemy_procude_num == 0) return 0;
 
 	iter = SoldierPointList.begin();
 	int ignore_dis = MAP_SIZE + (MAP_SIZE >> 1);
@@ -3662,7 +3677,9 @@ int defense_produce_strategy()
 #endif // DEBUG
 
 		if (my_produce_num < num_dis * my_defense_num) return 0;
-		if (enemy_procude_num - 1 <= my_defense_num) return 0;
+		if ((enemy_procude_num>1) && (enemy_procude_num - 1 <= my_defense_num)) return 0;
+		if ((enemy_procude_num == 1) && (enemy_procude_num <= my_defense_num)) return 0;
+		if (enemy_procude_num == 0) return 0;
 	}
 	
 	return 0;
@@ -4580,8 +4597,8 @@ void excute_defenseinbase()
 	if (enemy_inbase)
 		basic_defense();
 	
-	//if (!enemy_inbase)
-	//	defense_produce_strategy();
+	if (!enemy_inbase)
+		defense_produce_strategy();
 
 	// Stage 3 - Create soldier to destroy all building
 	//if (state->turn%10==0)
@@ -4743,7 +4760,7 @@ void f_player()
 	tic();
 	command_num = 0;
 	max_bd_point = state->resource[ts19_flag].building_point;
-	if (ts19_flag >= 2)
+	if (ts19_flag >= 1)
 	{
 		if (state->turn == 0)
 		{
