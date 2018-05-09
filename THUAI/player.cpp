@@ -1,10 +1,10 @@
 /*
 TODO List
-- Experiment on outside strategy to each other
-
+- put ENIAC outside
+- check resource
 */
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define tic(); clock_t start=clock();
 #define toc(); cout<<double(clock()-start)/CLOCKS_PER_SEC<<endl;
@@ -373,7 +373,7 @@ void init()
 	for (; area_dis > 0; --area_dis)
 	{
 		count += discount[area_dis];
-		if (count > MAX_BD_NUM + MAX_BD_NUM_PLUS * 4)
+		if (count > 60 * 25 * 2.5)
 			break;
 	};
 
@@ -601,8 +601,8 @@ int initBuildmap()
 	can_upgrade_produce_num = 0;
 	can_upgrade_defense_num = 0; 
 	my_furthest_dist = 10000;
-	max_buildx = 0; max_buildy = 0;
-	for (int i = 0; i < BUILDING_TYPE; ++i) { my_building_num[i] = 0; enemy_building_num[i] = 0;}
+	max_buildx = BASE_SIZE + BD_RANGE_FROM_BASE; max_buildy = max_buildx;
+	for (int i = 0; i < Building_Type; ++i) { my_building_num[i] = 0; enemy_building_num[i] = 0;}
 	for (int i = 0; i < state->building[ts19_flag].size(); ++i) sell_list[i] = false;
 	for (int i = 1; i <= ROADCNT; ++i) musk_heal[i] = 0;
 	for (int i = 0; i < ROADCNT + 1; ++i) resource_area[i] = false;
@@ -1677,8 +1677,17 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x - tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x - tx, y - ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x - tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y - ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x - tx, y - ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y - ty);
+									}
+									
 								}
 							}
 						}
@@ -1692,8 +1701,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x - tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x - tx, y + ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x - tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y + ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x - tx, y + ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y + ty);
+									}
 								}
 							}
 						}
@@ -1710,8 +1727,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x + tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x + tx, y - ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x + tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y - ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x + tx, y - ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y - ty);
+									}
 								}
 							}
 						}
@@ -1725,8 +1750,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x + tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x + tx, y + ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x + tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y + ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x + tx, y + ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y + ty);
+									}
 								}
 							}
 						}
@@ -1754,7 +1787,7 @@ int build_produce(int n, BuildingType building_type)
 					{
 						if (y - ty >= 0)
 						{
-							if (ts19_map[x - tx][y - ty] == 1) 
+							if (ts19_map[x - tx][y - ty] == 1)
 							{
 								if (!flag)
 								{
@@ -1762,8 +1795,17 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x-tx,y-ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y)) 
-										soldier_pos = Position(x - tx, y - ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x - tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y - ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x - tx, y - ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y - ty);
+									}
+
 								}
 							}
 						}
@@ -1777,8 +1819,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x - tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x - tx, y + ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x - tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y + ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x - tx, y + ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x - tx, y + ty);
+									}
 								}
 							}
 						}
@@ -1795,8 +1845,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x + tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x + tx, y - ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x + tx, y - ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y - ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x + tx, y - ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y - ty);
+									}
 								}
 							}
 						}
@@ -1810,8 +1868,16 @@ int build_produce(int n, BuildingType building_type)
 								}
 								else
 								{
-									if (enemy_base_dist(x + tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
-										soldier_pos = Position(x + tx, y + ty);
+									if (building_type != Von_Neumann)
+									{
+										if (enemy_base_dist(x + tx, y + ty)<enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y + ty);
+									}
+									else
+									{
+										if (enemy_base_dist(x + tx, y + ty)>enemy_base_dist(soldier_pos.x, soldier_pos.y))
+											soldier_pos = Position(x + tx, y + ty);
+									}
 								}
 							}
 						}
@@ -3305,10 +3371,10 @@ int attack_produce_strategy()
 	if (ts19_flag <= 2)
 	{
 		building_type = Shannon;
-		//if (!first_produce)
+		if (!first_produce)
 			if (state->age[ts19_flag] > BIT)
 				building_type = Norton;
-		//if (ohm_count >= max_ohm_count) building_type = Shannon;
+		if (ohm_count >= max_ohm_count) building_type = Shannon;
 		if ((enemy_inbase) && (bool_count == 0))
 		{
 			building_type = Shannon;
@@ -3320,19 +3386,24 @@ int attack_produce_strategy()
 		}
 		if (state->age[ts19_flag] == NETWORK)
 		{
+#ifdef DEBUG
+			file << "larry_count: " << larry_count << endl;
+
+#endif // DEBUG
 			if (larry_count >= 6)
 			{
-				if (!no_norton)
-				{
+				//if (!no_norton)
+				//{
 					if (ohm_count < max_ohm_count) building_type = Norton;
 					else
 					{
-						no_norton = true;
-						building_type = Thevenin;
+						//no_norton = true;
+						//building_type = Thevenin;
+						building_type = Shannon;
 					}
 					
-				}
-				else building_type = Thevenin;
+				//}
+				//else building_type = Thevenin;
 			}
 			else building_type = Berners_Lee;
 		}
@@ -3348,16 +3419,18 @@ int attack_produce_strategy()
 		}
 	}
 
-	//if ((state->age[ts19_flag] == PROCESSOR)||(state->age[ts19_flag] == ALGORITHM))
-	//{
-	///*	int von_num = my_building_num[Shannon] + my_building_num[Thevenin] - my_building_num[Von_Neumann];
-	//	if ((ohm_count>0)||(larry_count>0))
-	//		if (von_num > 0)
-	//			build_produce(1, Von_Neumann);*/
-	//	if ((ohm_count > 0) || (larry_count > 0))
-	//		if (my_building_num[Von_Neumann] == 0)
-	//			build_produce(1, Von_Neumann);
-	//}
+	if ((state->age[ts19_flag] == PROCESSOR)||(state->age[ts19_flag] == ALGORITHM))
+	{
+	/*	int von_num = my_building_num[Shannon] + my_building_num[Thevenin] - my_building_num[Von_Neumann];
+		if ((ohm_count>0)||(larry_count>0))
+			if (von_num > 0)
+				build_produce(1, Von_Neumann);*/
+
+
+		if ((ohm_count > 0) || (larry_count > 0))
+			if (my_building_num[Von_Neumann] < 2)
+				build_produce(1, Von_Neumann);
+	}
 	if (state->age[ts19_flag] >= NETWORK)
 	{
 		int von_num = my_building_num[Shannon] + my_building_num[Thevenin] - my_building_num[Von_Neumann];
@@ -3368,6 +3441,57 @@ int attack_produce_strategy()
 	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
 	while (bd_num > 0)
 		bd_num = build_produce(bd_num, building_type);
+	return 0;
+}
+
+int attack_produce_test_strategy()
+{
+	if (my_resource_num < resource_num) return 0;
+	//if (can_upgrade_reource_num > 0) return 0;
+	int shannon_count = 0, ultron_count = 0;
+	Position tmppos;
+	for (int i = 0; i < state->building[1 - ts19_flag].size(); ++i)
+	{
+		tmppos = state->building[1 - ts19_flag][i].pos;
+		if (enemy_base_dist(trans(tmppos.x), trans(tmppos.y)) >= (MAP_SIZE >> 1)) continue;
+		if (state->building[1 - ts19_flag][i].building_type == Shannon) ++shannon_count;
+		if (state->building[1 - ts19_flag][i].building_type == Tony_Stark) ++ultron_count;
+	}
+	//Construct produce building
+	int bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+	BuildingType building_type;
+	int max_ohm_count = 10;
+	if (ROADCNT == 3) max_ohm_count = 6;
+	if (first_produce)
+	{
+		if (my_furthest_dist < (MAP_SIZE >> 1)) first_produce = false;
+	}
+	if (ts19_flag <= 2)
+	{
+		if (state->age[ts19_flag] < AI)
+		{
+			building_type = Shannon;
+			if (shannon_count < 2)
+			{
+				build_produce(2-shannon_count, building_type);
+			}
+		}
+		
+		
+		if (state->age[ts19_flag] == AI)
+		{
+			building_type = Tony_Stark;
+			if (ultron_count < 2)
+			{
+				build_produce(2-ultron_count, building_type);
+			}
+		}
+	}
+
+    
+	bd_num = MAX_BD_NUM + MAX_BD_NUM_PLUS * state->age[ts19_flag] - my_bd_num;
+	while (bd_num > 0)
+		bd_num = build_produce_inbase(bd_num, Shannon);
 	return 0;
 }
 
@@ -3500,10 +3624,10 @@ bool defense_order(SoldierName x, SoldierName y)
 int defense_produce_strategy()
 {
 	//if (my_produce_num + (MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) - state->building[ts19_flag].size() < 5) return 0;
-	int num_dis = int(state->age[ts19_flag]) + 1;
-	if (num_dis == 6) --num_dis;
+	int num_dis = int(state->age[ts19_flag]) + 2;
+	if (num_dis > 4) num_dis = 4;
 
-	if (my_produce_num < num_dis * my_defense_num) return 0;
+	//if (my_produce_num < num_dis * my_defense_num) return 0;
 	initFiremap_point();
 	
 	std::list<SoldierPoint>::iterator iter = SoldierPointList.begin();
@@ -3512,34 +3636,25 @@ int defense_produce_strategy()
 		if (iter->soldier_type == ULTRON)
 			if (!iter->musk)
 				if (!build_defense_outside(iter->pos, Musk)) return 0;
-		if (my_produce_num < num_dis * my_defense_num) return 0;
+		//if (my_produce_num < num_dis * my_defense_num) return 0;
 	}
 
+	if (my_produce_num < num_dis * my_defense_num) return 0;
+	if (enemy_procude_num - 1 <= my_defense_num) return 0;
+
 	iter = SoldierPointList.begin();
+	int ignore_dis = MAP_SIZE + (MAP_SIZE >> 1);
+	if ((state->age[ts19_flag] == AI) || (state->age[1 - ts19_flag] == AI)) ignore_dis = MAP_SIZE;
 	for (; iter != SoldierPointList.end(); ++iter)
 	{
+		if (iter->pos.x + iter->pos.y < ignore_dis) continue;
 		if (OriginalSoldierAttribute[iter->soldier_type][ACTION_MODE] == MOVING_ATTACK) continue;
 		if (OriginalSoldierAttribute[iter->soldier_type][ACTION_MODE] == BASE_ATTACK)
 		{
 			//if (iter->pos.x + iter->pos.y > MAP_SIZE) continue;
 			continue;
 		}
-		
-		//if (state->age[ts19_flag] < NETWORK)
-		//{
-		//	if (iter->soldier_type == Shannon)
-		//	{
-		//		if (enemy_building_num[Shannon] * my_building_num[Ohm] < (enemy_building_num[Thevenin] + enemy_building_num[Norton])*my_building_num[Bool])
-		//			continue;
-		//	}
-		//	if ((iter->soldier_type == Thevenin) || (iter->soldier_type == Norton))
-		//	{
-		//		if (enemy_building_num[Shannon] * my_building_num[Ohm] > (enemy_building_num[Thevenin] + enemy_building_num[Norton])*my_building_num[Bool])
-		//			continue;
-		//	}
-		//}
 
-		//LOG(iter->fire); LOG("  "); LOGN(float(OriginalSoldierAttribute[iter->soldier_type][SOLDIER_ORIGINAL_HEAL]) / SoldierCD[iter->soldier_type]);
 		if (iter->fire >= float(OriginalSoldierAttribute[iter->soldier_type][SOLDIER_ORIGINAL_HEAL])/(SoldierCD[iter->soldier_type]+0.00000001)-0.1) continue;
 		if (!build_defense_outside(iter->pos, defense_choice_outside[iter->soldier_type][state->age[ts19_flag]])) return 0;
 #ifdef DEBUG
@@ -3547,6 +3662,7 @@ int defense_produce_strategy()
 #endif // DEBUG
 
 		if (my_produce_num < num_dis * my_defense_num) return 0;
+		if (enemy_procude_num - 1 <= my_defense_num) return 0;
 	}
 	
 	return 0;
@@ -3866,7 +3982,7 @@ int maintain()
 
 int sell_trash_outside()
 {
-	if (my_bd_num < MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) return 0;
+	//if (my_bd_num < MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) return 0;
 	int need_bd_point = OriginalBuildingAttribute[Ohm][ORIGINAL_BUILDING_POINT];
 	if (state->age[ts19_flag]>=NETWORK) need_bd_point = OriginalBuildingAttribute[Larry_Roberts][ORIGINAL_BUILDING_POINT];
 	if (state->age[ts19_flag] >= AI) 
@@ -3892,7 +4008,8 @@ int sell_trash_outside()
 			if ((state->building[ts19_flag][i].building_type == Bool)||
 				(state->building[ts19_flag][i].building_type == Ohm))
 					mysell(i);
-			if (sell_num >= need_building) return 0;
+			//if (sell_num >= need_building) return 0;
+			if (my_bd_num - sell_num + need_building <= MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) return 0;
 			if (command_num >= 50) return 0;
 		}
 	}
@@ -3903,7 +4020,8 @@ int sell_trash_outside()
 			if //((state->building[ts19_flag][i].building_type == Larry_Roberts) ||
 				(state->building[ts19_flag][i].building_type == Mole)//)
 				mysell(i);
-			if (sell_num >= need_building) return 0;
+			//if (sell_num >= need_building) return 0;
+			if (my_bd_num - sell_num + need_building <= MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) return 0;
 			if (command_num >= 50) return 0;
 		}
 	}
@@ -3941,7 +4059,8 @@ int sell_trash_outside()
 					}
 			mysell(sell_programmer_id);
 			--my_resource_num;
-			if (sell_num >= need_building) return 0;
+			//if (sell_num >= need_building) return 0;
+			if (my_bd_num - sell_num + need_building <= MAX_BD_NUM + MAX_BD_NUM_PLUS*state->age[ts19_flag]) return 0;
 		}
 	}
 
@@ -4352,8 +4471,8 @@ void Setup_defense()
 
 void excute()
 {
-	int resource_limit[6] = { 40,30,40,60,40,20 };
-	//int resource_limit[6] = { 37,30,40,60,40,20 };
+	//int resource_limit[6] = { 40,30,40,60,40,20 };
+	int resource_limit[6] = { 33,30,40,60,40,20 };
 	initBuildmap();
 	Getsoldierpoint();
 	//soldierSituation();
@@ -4362,13 +4481,14 @@ void excute()
 	// Stage 1 - Get resource
 	resource_num = resource_limit[state->age[ts19_flag]];
 	resource_produce_strategy();
-	if (state->age[ts19_flag] == BIT) { update_age(); return; }
+	//if (state->age[ts19_flag] == BIT) { update_age(); return; }
 	// Stage 2 - Build to defense
 	//defense_produce_strategy();
 
 	// Stage 3 - Create soldier to destroy all building
 	//if (state->turn%10==0)
-	attack_produce_strategy();
+	attack_produce_test_strategy();
+	//attack_produce_strategy();
 
 	// Stage 4 update
 	update_age();
@@ -4419,8 +4539,8 @@ void basic_defense()
 
 void excute_defenseinbase()
 {
-	int resource_limit[6] = { 40,30,30,60,40,20 };
-	int resource_limit_defense[6] = { 32,30,30,60,40,20 };
+	int resource_limit[6] = { 40,30,40,60,40,20 };
+	int resource_limit_defense[6] = { 32,30,30,60,60,20 };
 	initBuildmap();
 	Getsoldierpoint();
 	//soldierSituation();
@@ -4457,11 +4577,11 @@ void excute_defenseinbase()
 	if (!enemy_inbase)
 		if (state->age[ts19_flag] == BIT) { update_age(); return; }
 	// Stage 2 - Build to defense
-	//if (enemy_inbase)
-	//	basic_defense();
+	if (enemy_inbase)
+		basic_defense();
 	
-	if (!enemy_inbase)
-		defense_produce_strategy();
+	//if (!enemy_inbase)
+	//	defense_produce_strategy();
 
 	// Stage 3 - Create soldier to destroy all building
 	//if (state->turn%10==0)
@@ -4616,6 +4736,8 @@ void f_player()
 	file << "building: " << state->building[ts19_flag].size() << endl;
 	file << "resource: " << state->resource[ts19_flag].resource << endl;
 	file << "enemyresource: " << state->resource[1-ts19_flag].resource << endl;
+	file << "myage: " << state->age[ts19_flag] << endl;
+	file << "enemyage: " << state->age[1-ts19_flag] << endl;
 #endif // DEBUG
 	
 	tic();
@@ -4641,8 +4763,8 @@ void f_player()
 			Setup(); 
 
 		}
-		else excute();
-		//else excute_defenseinbase();
+		//else excute();
+		else excute_defenseinbase();
 	}
 
 	toc();
