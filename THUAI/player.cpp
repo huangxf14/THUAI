@@ -141,6 +141,8 @@ bool enemy_inbase = false;
 float musk_heal[ROADMAX + 1];
 bool defense_ohm_finish[3];
 
+Position max_soldier_cnt_point;
+SoldierName max_soldier_type=BIT_STREAM;
 
 //remember Musk when building
 const BuildingType defense_choise[Soldier_Type][AI+1] = {
@@ -1056,6 +1058,11 @@ int initFiremap_point()
 void Getsoldierpoint()
 {
 	// clear List
+	int *soldier_cnt = new int[state->soldier[1 - ts19_flag].size()];
+	int maxcnt = 0;
+	max_soldier_cnt_point = Position(-1, -1);
+	max_soldier_type = BIT_STREAM;
+
 	std::list<SoldierPoint>::iterator iter = SoldierPointList.begin();
 	for (; iter != SoldierPointList.end();)
 	{
@@ -1071,7 +1078,37 @@ void Getsoldierpoint()
 		SoldierPointList.push_back(SoldierPoint(state->soldier[1 - ts19_flag][i].pos,
 			SoldierCD[state->soldier[1 - ts19_flag][i].soldier_name], 
 			state->soldier[1 - ts19_flag][i].soldier_name));
+
+		soldier_cnt[i] = 1;
+		if (OriginalSoldierAttribute[state->soldier[1 - ts19_flag][i].soldier_name][ACTION_MODE] != BUILDING_ATTACK) continue;
+
+		if (maxcnt<10)
+			for (int j = i - 1; j >= 0; --j)
+			{
+				if (OriginalSoldierAttribute[state->soldier[1 - ts19_flag][j].soldier_name][ACTION_MODE] != BUILDING_ATTACK) continue;
+				if ((state->soldier[1 - ts19_flag][i].pos.x == state->soldier[1 - ts19_flag][j].pos.x) &&
+					(state->soldier[1 - ts19_flag][i].pos.y == state->soldier[1 - ts19_flag][j].pos.y))
+				{
+					soldier_cnt[i] = soldier_cnt[j] + 1;
+					break;
+				}
+			}
+		if (soldier_cnt[i] > maxcnt)
+		{
+			maxcnt = soldier_cnt[i];
+			max_soldier_cnt_point = state->soldier[1 - ts19_flag][i].pos;
+			max_soldier_cnt_point = Position(trans(max_soldier_cnt_point.x), trans(max_soldier_cnt_point.y));
+			max_soldier_type = state->soldier[1 - ts19_flag][i].soldier_name;
+
+		}
 	}
+
+	if (maxcnt < 2)
+	{
+		max_soldier_cnt_point = Position(-1, -1);
+	}
+
+	delete soldier_cnt;
 	return;
 }
 
@@ -3109,7 +3146,7 @@ int build_defense_outside(Position pos, BuildingType building_type,int tmpdis=1)
 				}
 			}
 		}
-	return 0;
+	return 1;
 }
 
 int upgrade_attack(int n)
@@ -3379,6 +3416,7 @@ int attack_produce_strategy()
 			if (state->age[ts19_flag] > BIT)
 				building_type = Norton;
 		if (ohm_count >= max_ohm_count) building_type = Shannon;
+		if (my_building_num[Shannon] < 5) building_type = Shannon;
 		if (state->age[ts19_flag] > CIRCUIT)
 		{
 			if ((my_building_num[Norton] > 15) && (enemy_building_num[Shannon] > my_building_num[Shannon]))
@@ -3652,8 +3690,22 @@ int defense_produce_strategy()
 	if ((enemy_procude_num == 1) && (enemy_procude_num <= my_defense_num)) return 0;
 	if (enemy_procude_num == 0) return 0;
 
-	iter = SoldierPointList.begin();
 	int ignore_dis = MAP_SIZE + (MAP_SIZE >> 1);
+
+	if ((max_soldier_cnt_point.x >= 0) && (max_soldier_cnt_point.y >= 0))
+	{
+		if (max_soldier_cnt_point.x + max_soldier_cnt_point.y >= ignore_dis)
+		{
+			if (!build_defense_outside(max_soldier_cnt_point, defense_choice_outside[max_soldier_type][state->age[ts19_flag]])) return 0;
+		}
+#ifdef DEBUG
+		file << "adsflkasdflka: " << max_soldier_type << endl;
+#endif // DEBUG
+
+	}
+
+	iter = SoldierPointList.begin();
+	//int ignore_dis = MAP_SIZE + (MAP_SIZE >> 1);
 	if ((state->age[ts19_flag] == AI) || (state->age[1 - ts19_flag] == AI)) ignore_dis = MAP_SIZE;
 	for (; iter != SoldierPointList.end(); ++iter)
 	{
@@ -4589,8 +4641,8 @@ void excute_defenseinbase()
 	if (!enemy_inbase)
 		if (state->age[ts19_flag] == BIT) { update_age(); return; }
 	// Stage 2 - Build to defense
-	if (enemy_inbase)
-		basic_defense();
+	//if (enemy_inbase)
+	//	basic_defense();
 	
 	if (!enemy_inbase)
 		defense_produce_strategy();
@@ -4787,8 +4839,8 @@ void f_player()
 			Setup();
 
 		}
-		else excute();
-		//else excute_defenseinbase();
+		//else excute();
+		else excute_defenseinbase();
 	}
 	else
 	{
